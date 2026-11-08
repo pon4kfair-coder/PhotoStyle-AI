@@ -48,9 +48,9 @@ h2{font-size:16px;margin:0;letter-spacing:-.3px}
 #preview{max-width:100%;max-height:51vh;width:auto;height:auto;display:none;object-fit:contain}
 #original{display:none;position:absolute;max-width:100%;max-height:51vh;width:auto;height:auto;object-fit:contain;inset:0;margin:auto}
 /* Swipe comparison: both canvases share the same image coordinate system. */
-.photo-frame{position:relative;display:none;width:max-content;max-width:100%;line-height:0;margin:auto;overflow:hidden;border-radius:13px;touch-action:pan-y;user-select:none;-webkit-user-select:none;--split:50%}
+.photo-frame{position:relative;display:none;max-width:100%;line-height:0;margin:auto;overflow:hidden;border-radius:13px;touch-action:pan-y;user-select:none;-webkit-user-select:none;--split:50%}
 .stage.has-photo .photo-frame{display:block}
-.photo-frame #preview{display:block;max-width:100%;max-height:51vh;width:auto;height:auto;object-fit:contain;pointer-events:none}
+.photo-frame #preview{display:block;max-width:none;max-height:none;width:100%;height:100%;object-fit:fill;pointer-events:none}
 .photo-frame #original{position:absolute;inset:0;display:block;max-width:none;max-height:none;width:100%;height:100%;object-fit:fill;clip-path:inset(0 calc(100% - var(--split)) 0 0);pointer-events:none}
 .comparison-line{position:absolute;left:var(--split);top:0;bottom:0;width:2px;transform:translateX(-50%);background:#fff;box-shadow:0 0 12px #000a;pointer-events:none;z-index:2}
 .comparison-handle{position:absolute;top:50%;left:var(--split);transform:translate(-50%,-50%);display:grid;place-items:center;width:47px;height:47px;padding:0;border:2px solid #fff;border-radius:50%;color:#131827;background:#f5f9ff;box-shadow:0 2px 20px #0008;z-index:3;cursor:ew-resize;touch-action:none;font-size:20px;font-weight:900}
@@ -58,8 +58,7 @@ h2{font-size:16px;margin:0;letter-spacing:-.3px}
 .compare-label{position:absolute;top:10px;padding:8px 10px;border-radius:10px;background:#0b122bcc;color:#fff;font-size:11px;font-weight:750;line-height:1;pointer-events:none;z-index:2}
 .compare-label.before{left:10px}.compare-label.after{right:10px}
 .photo-frame #preview,.photo-frame #original{-webkit-touch-callout:none}
-@media(min-width:600px){.photo-frame #preview{max-height:58vh}}
-@media(max-width:420px){.photo-frame #preview{max-height:51vh}}
+
 .mini-hint{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:12px 6px 1px;font-size:11px;color:#a2acc0}
 .mini-hint strong{color:#d4d5ff;font-weight:700}
 .mini-hint .private{color:#8fe6ce}
@@ -283,7 +282,17 @@ function pixelFilter(data,p){
  }}return data;
 }
 function paint(canvas,maxSide){const im=photo,scale=Math.min(1,maxSide/Math.max(im.naturalWidth,im.naturalHeight));const w=Math.max(1,Math.round(im.naturalWidth*scale)),h=Math.max(1,Math.round(im.naturalHeight*scale));canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(im,0,0,w,h);return ctx;}
-function draw(){if(!photo)return;const original=$('original'),processed=$('preview');paint(original,1100);processed.width=original.width;processed.height=original.height;const ctx=processed.getContext('2d');const data=original.getContext('2d',{willReadFrequently:true}).getImageData(0,0,original.width,original.height);pixelFilter(data,params);ctx.putImageData(data,0,0);}
+function updateFrameSize(){
+ if(!photo)return;
+ const availableWidth=Math.max(1,$('stage').clientWidth-2);
+ const ratio=photo.naturalWidth/photo.naturalHeight;
+ const maxHeight=window.innerHeight*(window.innerWidth>=600?.58:.51);
+ const width=Math.max(1,Math.min(photo.naturalWidth,availableWidth,maxHeight*ratio));
+ $('photoFrame').style.width=width+'px';
+ $('photoFrame').style.height=(width/ratio)+'px';
+}
+window.addEventListener('resize',updateFrameSize);
+function draw(){if(!photo)return;updateFrameSize();const original=$('original'),processed=$('preview');paint(original,1100);processed.width=original.width;processed.height=original.height;const ctx=processed.getContext('2d');const data=original.getContext('2d',{willReadFrequently:true}).getImageData(0,0,original.width,original.height);pixelFilter(data,params);ctx.putImageData(data,0,0);}
 function schedule(){if(!photo)return;cancelAnimationFrame(pending);pending=requestAnimationFrame(draw);}
 function blobFrom(canvas,type){return new Promise(resolve=>canvas.toBlob(resolve,type,type==='image/jpeg'?.92:undefined));}
 async function savePhoto(){
