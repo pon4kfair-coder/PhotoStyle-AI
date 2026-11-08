@@ -101,6 +101,11 @@ h2{font-size:16px;margin:0;letter-spacing:-.3px}
 .ai-state{font-size:12px;color:#a8ebd9;min-height:18px;font-weight:700;line-height:1.4;overflow-wrap:anywhere}
 .ai-footnote{color:#b9c2d6;font-size:11px;line-height:1.6;margin:11px 0 0}
 .ai-footnote a{color:#aebaff}
+.upscale-result{margin-top:13px;border:1px solid #46566c;border-radius:14px;padding:11px;background:#0f1b2b}
+.upscale-result img{display:block;width:100%;max-height:280px;object-fit:contain;border-radius:10px;background:#091222}
+.upscale-result .btn{margin:12px 0 0}
+.upscale-result .muted{display:block;text-align:center;margin-top:8px}
+
 
 .dock{position:fixed;bottom:0;left:0;right:0;z-index:10;padding:12px max(14px,env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));background:linear-gradient(#101524e8,#101524fc);border-top:1px solid #434967;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
 .dock-inner{display:flex;gap:10px;max-width:860px;margin:0 auto}
@@ -181,9 +186,21 @@ footer{color:#8d97ae;text-align:center;font-size:11px;line-height:1.65;margin-to
     <div class="ai-state" id="aiPortraitStatus" role="status" aria-live="polite">Загрузи фотографию человека, затем нажми кнопку.</div>
     <p class="ai-footnote">При первом запуске понадобится интернет для загрузки модели MediaPipe. Если встроенный браузер не запускает AI, открой приложение в Safari. Фото обрабатывается на устройстве и не отправляется на сервер. MediaPipe может передавать Google диагностические метрики. Функция лучше работает с портретами людей, чем с пейзажами. <a href="https://www.npmjs.com/package/@mediapipe/tasks-vision" target="_blank" rel="noreferrer">О технологии</a>.</p>
   </div>
+  <div class="ai-card" style="margin-top:15px">
+    <h3>💎 Нейросетевой AI Upscale ×2</h3>
+    <p class="helper">Настоящая модель ESRGAN улучшает детали фотографии и увеличивает её вдвое. Работает отдельно от обычного 4K-экспорта.</p>
+    <button type="button" class="btn primary" id="upscaleRunButton">🚀 Запустить AI Upscale ×2</button>
+    <div class="ai-state" id="upscaleStatus" role="status" aria-live="polite">Загрузи фото, затем запусти AI Upscale ×2.</div>
+    <p class="ai-footnote">Экспериментальный режим для iPhone: чтобы не перегружать память, модель получает фото с длинной стороной не больше 768 пикселей и выдаёт результат до 1536 пикселей. Если оригинал большой, результат может оказаться меньше исходного. Первый запуск требует интернета и времени на скачивание модели. Фотография остаётся на устройстве.</p>
+    <div class="upscale-result" id="upscaleResultBox" hidden>
+      <img id="upscaleResultPreview" alt="Результат нейросетевого увеличения">
+      <span class="muted" id="upscaleResultSize"></span>
+      <button type="button" class="btn secondary" id="upscaleSaveButton">⬇ Сохранить AI-результат</button>
+    </div>
+  </div>
 </section>
 </main>
-<footer>PhotoStyle AI · Версия 2.2 · Локальная обработка фото<br>AI-портрет использует модель MediaPipe; Enhance Beta — обычный алгоритм резкости.</footer>
+<footer>PhotoStyle AI · Версия 2.2 · Локальная обработка фото<br>AI-портрет использует MediaPipe, AI Upscale — модель ESRGAN. Enhance Beta — обычный алгоритм резкости.</footer>
 </div>
 <div class="dock"><div class="dock-inner"><button class="btn secondary" id="choose" type="button">＋ Загрузить фото</button><button class="btn primary" id="save" type="button" disabled>⬇ Сохранить</button></div></div>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -385,7 +402,7 @@ function initSliders(){for(const [k,label,min,max] of fields){const line=documen
 async function loadPhoto(file){
  if(!file||!(file.type.startsWith('image/')||/\.(jpe?g|png|webp|heic|heif)$/i.test(file.name)))return toast('Выбери фотографию из галереи',true);
  const url=URL.createObjectURL(file),im=new Image();
- im.onload=()=>{URL.revokeObjectURL(url);photo=im;photoName=(file.name||'photo').replace(/\.[^.]+$/,'').replace(/[^a-zA-Z0-9а-яА-Я_-]/g,'_').slice(0,50)||'photo';$('resolution').textContent=im.naturalWidth+' × '+im.naturalHeight;$('empty').style.display='none';$('preview').style.display='block';$('stage').classList.add('has-photo');$('save').disabled=false;portraitMaskCanvas=null;portraitMode=false;portraitError='';portraitStep='';portraitPhotoVersion++;updatePortraitUI();draw();updateExportQuality();resetHistory();resetThumbnails();toast('Фото загружено. Выбирай стиль и настраивай эффект!');};
+ im.onload=()=>{URL.revokeObjectURL(url);photo=im;photoName=(file.name||'photo').replace(/\.[^.]+$/,'').replace(/[^a-zA-Z0-9а-яА-Я_-]/g,'_').slice(0,50)||'photo';$('resolution').textContent=im.naturalWidth+' × '+im.naturalHeight;$('empty').style.display='none';$('preview').style.display='block';$('stage').classList.add('has-photo');$('save').disabled=false;portraitMaskCanvas=null;portraitMode=false;portraitError='';portraitStep='';portraitPhotoVersion++;updatePortraitUI();clearUpscaleResult();draw();updateExportQuality();resetHistory();resetThumbnails();toast('Фото загружено. Выбирай стиль и настраивай эффект!');};
  im.onerror=()=>{URL.revokeObjectURL(url);toast('Не удалось открыть фото. Попробуй JPG или PNG.',true);};
  im.src=url;
 }
@@ -629,7 +646,7 @@ function compositePortrait(target){
  const blur=document.createElement('canvas');
  blur.width=Math.max(1,Math.round(width*scale));blur.height=Math.max(1,Math.round(height*scale));
  const bg=blur.getContext('2d');bg.imageSmoothingEnabled=true;bg.imageSmoothingQuality='high';
- bg.filter='blur(9px)';bg.drawImage(target,0,0,blur.width,blur.height);bg.filter='none';
+ bg.filter='blur(20px)';bg.drawImage(target,0,0,blur.width,blur.height);bg.filter='none';
  // Keep a full-resolution foreground with feathered person mask.
  const foreground=document.createElement('canvas');
  foreground.width=width;foreground.height=height;
@@ -645,6 +662,131 @@ function compositePortrait(target){
  ctx.drawImage(blur,0,0,width,height);
  ctx.drawImage(foreground,0,0);
 }
+
+
+// Real 2× neural upscaling with ESRGAN-slim from UpscalerJS.
+// The user photo is kept in a local canvas; JS and model weights load on demand.
+const UPSCALER_LIB_VERSION='1.0.0';
+const UPSCALER_SOURCE_SIDE=768;
+let upscalerPromise=null,upscaleRunning=false,upscaleResultUrl='',upscaleRunVersion=0;
+function upscaleStatus(message){$('upscaleStatus').textContent=message;}
+function clearUpscaleResult(){
+ upscaleRunVersion++;
+ upscaleResultUrl='';
+ $('upscaleResultBox').hidden=true;
+ $('upscaleResultPreview').removeAttribute('src');
+ $('upscaleResultSize').textContent='';
+ if(!upscaleRunning)upscaleStatus('Загрузи фото, затем запусти AI Upscale ×2.');
+}
+function addExternalScript(url,check){
+ if(check())return Promise.resolve();
+ return new Promise((resolve,reject)=>{
+  const element=document.createElement('script');
+  element.src=url;
+  element.async=true;
+  let finished=false;
+  const deadline=setTimeout(()=>done(new Error('Превышено время загрузки библиотеки')),45000);
+  function done(err){
+   if(finished)return;finished=true;clearTimeout(deadline);
+   element.onload=null;element.onerror=null;
+   if(err){element.remove();reject(err);}else if(check())resolve();
+   else reject(new Error('Библиотека не создала нужный модуль'));
+  }
+  element.onload=()=>done();
+  element.onerror=()=>done(new Error('Не удалось загрузить '+url.split('/')[2]));
+  document.head.appendChild(element);
+ });
+}
+async function loadUpscalerModel(){
+ if(!upscalerPromise)upscalerPromise=(async()=>{
+  const cdn='https://cdn.jsdelivr.net/npm/';
+  upscaleStatus('Загружаю TensorFlow.js…');
+  await addExternalScript(cdn+'@tensorflow/tfjs@4.22.0/dist/tf.min.js',()=>typeof window.tf==='object');
+  upscaleStatus('Загружаю модель ESRGAN ×2…');
+  await addExternalScript(cdn+'@upscalerjs/default-model@'+UPSCALER_LIB_VERSION+'/dist/umd/index.min.js',()=>!!window.DefaultUpscalerJSModel);
+  upscaleStatus('Запускаю нейросетевой движок…');
+  await addExternalScript(cdn+'upscaler@'+UPSCALER_LIB_VERSION+'/dist/browser/umd/upscaler.min.js',()=>typeof window.Upscaler==='function');
+  await window.tf.ready();
+  return new window.Upscaler({model:window.DefaultUpscalerJSModel});
+ })().catch(error=>{upscalerPromise=null;throw error;});
+ return upscalerPromise;
+}
+function prepareUpscaleInput(){
+ const input=document.createElement('canvas');
+ const ctx=paint(input,UPSCALER_SOURCE_SIDE);
+ const pixels=ctx.getImageData(0,0,input.width,input.height);
+ pixelFilter(pixels,params);
+ if(enhanceBeta)enhanceImage(pixels);
+ ctx.putImageData(pixels,0,0);
+ compositePortrait(input);
+ return input;
+}
+async function runUpscale(){
+ if(!photo){toast('Сначала загрузи фотографию',true);return;}
+ if(upscaleRunning)return;
+ upscaleRunning=true;
+ const jobVersion=upscaleRunVersion;
+ const runButton=$('upscaleRunButton');
+ runButton.disabled=true;
+ runButton.textContent='⏳ AI Upscale выполняется…';
+ $('upscaleResultBox').hidden=true;upscaleResultUrl='';
+ try{
+  const input=prepareUpscaleInput();
+  upscaleStatus('Подготавливаю '+input.width+' × '+input.height+' → '+input.width*2+' × '+input.height*2+' пикселей…');
+  // Let the iPhone repaint controls before expensive neural inference.
+  await new Promise(resolve=>setTimeout(resolve,60));
+  const network=await loadUpscalerModel();
+  upscaleStatus('Нейросеть восстанавливает детали… 0%');
+  let lastShown=-1;
+  const result=await network.upscale(input,{
+   output:'base64',
+   patchSize:64,
+   padding:4,
+   awaitNextFrame:true,
+   progress:fraction=>{
+    const percent=Math.max(0,Math.min(100,Math.round(fraction*100)));
+    if(percent-lastShown>=5){lastShown=percent;upscaleStatus('Нейросеть восстанавливает детали… '+percent+'%');}
+   }
+  });
+  if(jobVersion!==upscaleRunVersion)return;
+  if(typeof result!=='string'||!result.startsWith('data:image/'))throw new Error('Нейросеть вернула неизвестный формат');
+  upscaleResultUrl=result;
+  const image=$('upscaleResultPreview');
+  image.onload=()=>{$('upscaleResultSize').textContent='Результат: '+image.naturalWidth+' × '+image.naturalHeight+' пикселей';};
+  image.src=result;
+  $('upscaleResultBox').hidden=false;
+  upscaleStatus('Готово! AI-увеличение ×2 выполнено. Нажми «Сохранить AI-результат».');
+ }catch(error){
+  console.error('AI Upscale:',error);
+  upscaleStatus('Не удалось запустить AI Upscale: '+String(error?.message||error).slice(0,200)+'. Попробуй Safari с Wi-Fi.');
+  toast('AI Upscale пока не запустился. Подробности во вкладке AI.',true);
+ }finally{
+  upscaleRunning=false;
+  runButton.disabled=false;
+  runButton.textContent='🚀 Запустить AI Upscale ×2';
+ }
+}
+async function saveUpscaledPhoto(){
+ if(!upscaleResultUrl)return;
+ const btn=$('upscaleSaveButton');btn.disabled=true;
+ try{
+  const blob=await (await fetch(upscaleResultUrl)).blob();
+  const extension=blob.type.includes('jpeg')?'jpg':'png';
+  const filename=photoName+'_PhotoStyle_AI_x2.'+extension;
+  const file=new File([blob],filename,{type:blob.type||'image/png'});
+  if(navigator.canShare&&navigator.canShare({files:[file]})&&navigator.share){
+   try{await navigator.share({files:[file],title:'PhotoStyle AI Upscale ×2'});return;}
+   catch(err){if(err?.name==='AbortError')return;}
+  }
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
+  toast('Результат готов. Проверь «Загрузки» в Safari.');
+ }catch(err){console.error(err);toast('Не получилось сохранить AI-фото',true);}
+ finally{btn.disabled=false;}
+}
+$('upscaleRunButton').addEventListener('click',runUpscale);
+$('upscaleSaveButton').addEventListener('click',saveUpscaledPhoto);
 
 function paint(canvas,maxSide,upscale=false){const im=photo,scale=upscale?maxSide/Math.max(im.naturalWidth,im.naturalHeight):Math.min(1,maxSide/Math.max(im.naturalWidth,im.naturalHeight));const w=Math.max(1,Math.round(im.naturalWidth*scale)),h=Math.max(1,Math.round(im.naturalHeight*scale));canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(im,0,0,w,h);return ctx;}
 // Match the visible image's physical pixels to iPhone Retina density.
