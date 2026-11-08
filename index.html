@@ -119,6 +119,10 @@ h2{font-size:16px;margin:0;letter-spacing:-.3px}
 .scene-controls{display:flex;align-items:center;gap:12px;margin:14px 2px 3px;font-size:12px;color:#c5d0e8;font-weight:650}
 .scene-controls input{flex:1;min-width:70px;accent-color:#9cf1db}
 .scene-controls output{width:25px;text-align:right;color:#b8fff0;font-variant-numeric:tabular-nums}
+.upscale-quality{display:flex;align-items:center;gap:10px;margin:14px 0;padding:11px 12px;border-radius:13px;background:#19243a;border:1px solid #485774;font-size:12px;font-weight:700}
+.upscale-quality select{min-width:0;flex:1;color:#f7f7ff;background:#27304c;border:1px solid #586c8d;border-radius:10px;padding:10px 8px;font-size:12px}
+.ai-card .scene-choice{margin:0}
+
 
 .upscale-result{margin-top:13px;border:1px solid #46566c;border-radius:14px;padding:11px;background:#0f1b2b}
 .upscale-result img{display:block;width:100%;max-height:280px;object-fit:contain;border-radius:10px;background:#091222}
@@ -219,9 +223,13 @@ footer{color:#8d97ae;text-align:center;font-size:11px;line-height:1.65;margin-to
   <div class="ai-card" style="margin-top:15px">
     <h3>💎 Нейросетевой AI Upscale ×2</h3>
     <p class="helper">Настоящая модель ESRGAN улучшает детали фотографии и увеличивает её вдвое. Работает отдельно от обычного 4K-экспорта.</p>
+    <label class="upscale-quality">Качество <select id="upscaleQuality" aria-label="Качество AI-увеличения">
+      <option value="768">Быстро · до 1536 px</option>
+      <option value="1024">Детально · до 2048 px</option>
+    </select></label>
     <button type="button" class="btn primary" id="upscaleRunButton">🚀 Запустить AI Upscale ×2</button>
     <div class="ai-state" id="upscaleStatus" role="status" aria-live="polite">Загрузи фото, затем запусти AI Upscale ×2.</div>
-    <p class="ai-footnote">Экспериментальный режим для iPhone: чтобы не перегружать память, модель получает фото с длинной стороной не больше 768 пикселей и выдаёт результат до 1536 пикселей. Если оригинал большой, результат может оказаться меньше исходного. Первый запуск требует интернета и времени на скачивание модели. Фотография остаётся на устройстве.</p>
+    <p class="ai-footnote">Экспериментальный режим для iPhone: чтобы не перегружать память, модель получает фото с длинной стороной до 768 или 1024 пикселей и увеличивает его вдвое. Если оригинал большой, результат может оказаться меньше исходного. Первый запуск требует интернета и времени на скачивание модели. Фотография остаётся на устройстве.</p>
     <div class="upscale-result" id="upscaleResultBox" hidden>
       <img id="upscaleResultPreview" alt="Результат нейросетевого увеличения">
       <span class="muted" id="upscaleResultSize"></span>
@@ -708,6 +716,12 @@ async function enablePortrait(){
    }
   }
   if(expectedPhoto!==photo||expectedVersion!==portraitPhotoVersion)return;
+  // Reject completely empty/opaque masks: this is not a successful background replacement.
+  const maskData=newMask.getContext('2d',{willReadFrequently:true}).getImageData(0,0,newMask.width,newMask.height).data;
+  let minA=255,maxA=0;
+  const stride=Math.max(4,Math.floor(maskData.length/512/4)*4);
+  for(let i=3;i<maskData.length;i+=stride){minA=Math.min(minA,maskData[i]);maxA=Math.max(maxA,maskData[i]);}
+  if(maxA-minA<18)throw new Error('Маска человека почти однотонная. Попробуй фото, где человек хорошо отделяется от фона.');
   portraitMaskCanvas=newMask;recordHistory();portraitMode=true;recordHistory();schedule();
   toast('Нейросеть выделила человека — новый фон применён!');
  }catch(error){
@@ -932,7 +946,7 @@ function compositePortrait(target){
 // Real 2× neural upscaling with ESRGAN-slim from UpscalerJS.
 // The user photo is kept in a local canvas; JS and model weights load on demand.
 const UPSCALER_LIB_VERSION='1.0.0';
-const UPSCALER_SOURCE_SIDE=768;
+const UPSCALER_SOURCE_SIDE=768; // Fast mode. Detailed mode uses 1024.
 let upscalerPromise=null,upscaleRunning=false,upscaleResultUrl='',upscaleRunVersion=0;
 function upscaleStatus(message){$('upscaleStatus').textContent=message;}
 function clearUpscaleResult(){
@@ -978,7 +992,8 @@ async function loadUpscalerModel(){
 }
 function prepareUpscaleInput(){
  const input=document.createElement('canvas');
- const ctx=paint(input,UPSCALER_SOURCE_SIDE);
+ const inputSide=Number($('upscaleQuality').value)||UPSCALER_SOURCE_SIDE;
+ const ctx=paint(input,inputSide);
  const pixels=ctx.getImageData(0,0,input.width,input.height);
  pixelFilter(pixels,params);
  if(enhanceBeta)enhanceImage(pixels);
