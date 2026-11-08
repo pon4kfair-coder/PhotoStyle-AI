@@ -94,7 +94,7 @@ h2{font-size:16px;margin:0;letter-spacing:-.3px}
 .style{position:relative;min-height:117px;display:flex;flex-direction:column;align-items:stretch;justify-content:space-between;border-radius:18px;background:#1a2031;color:white;border:1px solid #3a425f;padding:9px;text-align:left;font-size:13px;font-weight:700;line-height:1.2;overflow:hidden}
 .style.selected{border-color:#a7f4e1;background:#24283d;box-shadow:0 0 0 1px #80e8d9}
 .style.selected:after{content:"✓";position:absolute;right:14px;top:13px;background:#e0fff7;color:#142b2a;width:25px;height:25px;border-radius:99px;display:grid;place-items:center;font-size:14px;box-shadow:0 1px 10px #0003}
-.style .swatch{position:relative;height:72px;width:100%;border-radius:12px;display:grid;place-items:center;background:radial-gradient(ellipse at 30% 20%,#ffffff40,transparent 42%),linear-gradient(125deg,var(--a),var(--b));overflow:hidden}.swatch .thumb-image{width:100%;height:100%;position:absolute;inset:0;display:block;object-fit:cover;pointer-events:none}.swatch:has(.thumb-image) .swatch-icon{opacity:0}
+.style .swatch{position:relative;height:72px;width:100%;border-radius:12px;display:grid;place-items:center;background:radial-gradient(ellipse at 30% 20%,#ffffff40,transparent 42%),linear-gradient(125deg,var(--a),var(--b));overflow:hidden}.swatch .thumb-image{width:100%;height:100%;position:absolute;inset:0;display:block;object-fit:cover;image-rendering:auto;pointer-events:none}.swatch:has(.thumb-image) .swatch-icon{opacity:0}
 .swatch-icon{font-size:28px;text-shadow:0 2px 10px #1117;filter:drop-shadow(0 2px 4px #0004)}
 .style-title{padding:7px 3px 1px;display:block}
 .style.selected .style-title{color:#e0fffa}
@@ -168,7 +168,7 @@ footer{color:#8d97ae;text-align:center;font-size:11px;line-height:1.65;margin-to
 <section class="group panel" id="stylesPanel" data-panel="styles" role="tabpanel">
   <div class="group-head"><h2>Выбери настроение</h2><span class="muted">16 эффектов</span></div>
   <div id="presets" class="styles" aria-label="Готовые стили"></div>
-  <p class="helper" style="margin-top:13px">Миниатюры показывают эффекты на твоём фото. Теперь предпросмотр работает в повышенном разрешении, а стили с плавными оттенками не разбивают цвета на квадратики.</p>
+  <p class="helper" style="margin-top:13px">Миниатюры стилей теперь создаются в повышенном разрешении для Retina-экрана iPhone и с более качественным сглаживанием.</p>
 </section>
 <section class="group panel" id="adjustPanel" data-panel="adjust" role="tabpanel" hidden>
   <div class="group-head"><h2>Тонкая настройка</h2><button class="btn ghost" id="reset" style="min-height:37px;padding:8px 12px">↺ Сбросить</button></div>
@@ -183,7 +183,7 @@ footer{color:#8d97ae;text-align:center;font-size:11px;line-height:1.65;margin-to
   <input id="importFile" type="file" accept=".json,application/json" hidden>
 </section>
 </main>
-<footer>PhotoStyle AI · Версия 1.8 · Локальная обработка фото<br>Эффекты и Enhance Beta работают локально. Enhance Beta — не нейросеть.</footer>
+<footer>PhotoStyle AI · Версия 1.9 · Локальная обработка фото<br>Эффекты и Enhance Beta работают локально. Enhance Beta — не нейросеть.</footer>
 </div>
 <div class="dock"><div class="dock-inner"><button class="btn secondary" id="choose" type="button">＋ Загрузить фото</button><button class="btn primary" id="save" type="button" disabled>⬇ Сохранить</button></div></div>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -277,8 +277,9 @@ function switchStyle(name,p){recordHistory();selected=name;params=normalize(p);i
 // Live previews: the source photo and all generated thumbnails stay on this device.
 let thumbnailBase=null,thumbnailVersion=0,thumbnailCache=new Map(),thumbnailQueued=new Set(),thumbnailJobs=[],thumbnailBusy=false;
 const thumbnailCanvas=document.createElement('canvas');
-thumbnailCanvas.width=384;
-thumbnailCanvas.height=216;
+// Retina-ready miniature cards. Kept smaller than the full preview to stay responsive.
+thumbnailCanvas.width=672;
+thumbnailCanvas.height=320;
 const thumbnailContext=thumbnailCanvas.getContext('2d',{willReadFrequently:true});
 function thumbnailKey(name,p){return name+'|'+JSON.stringify(normalize(p));}
 function resetThumbnails(){
@@ -288,6 +289,8 @@ function resetThumbnails(){
  const w=thumbnailCanvas.width,h=thumbnailCanvas.height,iw=photo.naturalWidth,ih=photo.naturalHeight;
  const cover=Math.max(w/iw,h/ih),width=iw*cover,height=ih*cover;
  thumbnailContext.clearRect(0,0,w,h);
+ thumbnailContext.imageSmoothingEnabled=true;
+ thumbnailContext.imageSmoothingQuality='high';
  thumbnailContext.drawImage(photo,(w-width)/2,(h-height)/2,width,height);
  thumbnailBase=thumbnailContext.getImageData(0,0,w,h);
  drawStyles();
@@ -316,7 +319,7 @@ function queueThumbnail(name,p,swatch){
 }
 function processThumbnails(){
  // Render two small thumbnails per task so the editor stays responsive on iPhone.
- for(let count=0;count<2&&thumbnailJobs.length;count++){
+ for(let count=0;count<1&&thumbnailJobs.length;count++){
   const job=thumbnailJobs.shift();
   if(job.version!==thumbnailVersion)continue;
   thumbnailQueued.delete(job.key);
@@ -326,12 +329,12 @@ function processThumbnails(){
    pixels.data.set(thumbnailBase.data);
    pixelFilter(pixels,job.params);
    thumbnailContext.putImageData(pixels,0,0);
-   const url=thumbnailCanvas.toDataURL('image/jpeg',.9);
+   const url=thumbnailCanvas.toDataURL('image/jpeg',.95);
    thumbnailCache.set(job.key,url);
    applyThumbnail(job.key,url);
   }catch(err){console.warn('Не удалось создать миниатюру',err);}
  }
- if(thumbnailJobs.length)setTimeout(processThumbnails,22);
+ if(thumbnailJobs.length)setTimeout(processThumbnails,16);
  else thumbnailBusy=false;
 }
 
