@@ -1,0 +1,19 @@
+{
+  "name": "PhotoStyle AI — Фоторедактор",
+  "short_name": "PhotoStyle AI",
+  "description": "Бесплатные стили для фото на iPhone",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0c0e19",
+  "theme_color": "#10121f",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
