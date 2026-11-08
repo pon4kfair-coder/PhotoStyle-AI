@@ -81,8 +81,8 @@ h2{font-size:16px;margin:0;letter-spacing:-.3px}
 .primary{background:linear-gradient(112deg,#afa0ff,#77e9d5);color:#131827;box-shadow:0 6px 24px #88d9e522}
 .secondary{background:#242a40;color:#f1f3ff;border:1px solid #434b66}
 .ghost{background:#222940;color:#dce4ff;border:1px solid #39425e}
-.navtabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:5px;border-radius:18px;border:1px solid #353e57;background:#141a2c;margin:22px 0 17px;position:sticky;top:7px;z-index:4;box-shadow:0 7px 21px #0003}
-.tab{border:0;min-height:47px;padding:10px 6px;border-radius:13px;background:transparent;color:#aeb9cf;font-size:13px;font-weight:750}
+.navtabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:5px;border-radius:18px;border:1px solid #353e57;background:#141a2c;margin:22px 0 17px;position:sticky;top:7px;z-index:4;box-shadow:0 7px 21px #0003}
+.tab{border:0;min-height:47px;padding:10px 3px;border-radius:13px;background:transparent;color:#aeb9cf;font-size:13px;font-weight:750}
 .tab.active{color:#1a1c30;background:linear-gradient(120deg,#b5a6ff,#8cf2d9);box-shadow:0 3px 13px #0002}
 .tab .tabicon{margin-right:4px}
 .panel{animation:rise .18s ease}
@@ -107,6 +107,13 @@ h2{font-size:16px;margin:0;letter-spacing:-.3px}
 .bottomrow{display:flex;gap:9px;margin-top:16px;flex-wrap:wrap}
 .bottomrow .btn{flex:1}
 .helper{margin:0 0 15px;color:var(--muted);font-size:12px;line-height:1.5}
+.ai-card{background:linear-gradient(130deg,#25243b,#122b31);border:1px solid #48546b;border-radius:19px;padding:17px}
+.ai-card h3{font-size:17px;letter-spacing:-.5px;margin:2px 0 8px}
+.ai-card .btn{width:100%;margin:12px 0}
+.ai-state{font-size:12px;color:#a8ebd9;min-height:18px;font-weight:700;line-height:1.4}
+.ai-footnote{color:#b9c2d6;font-size:11px;line-height:1.6;margin:11px 0 0}
+.ai-footnote a{color:#aebaff}
+
 .dock{position:fixed;bottom:0;left:0;right:0;z-index:10;padding:12px max(14px,env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));background:linear-gradient(#101524e8,#101524fc);border-top:1px solid #434967;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
 .dock-inner{display:flex;gap:10px;max-width:860px;margin:0 auto}
 .dock .btn{flex:1;min-height:53px}
@@ -115,7 +122,7 @@ footer{color:#8d97ae;text-align:center;font-size:11px;line-height:1.65;margin-to
 #toast.error{background:#ffdedb;color:#562221}
 @keyframes rise{from{opacity:.5;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 @media(min-width:600px){.styles{grid-template-columns:repeat(4,minmax(0,1fr))}.app{padding-top:28px}.stage{min-height:390px}#preview,#original{max-height:58vh}}
-@media(max-width:420px){.app{padding:15px 12px 24px}.mark{height:44px;width:44px;border-radius:15px;font-size:27px}h1{font-size:19px}.pill{font-size:10px;padding:7px}.stage{min-height:285px}.intro h2{font-size:26px}.sliders{grid-template-columns:1fr}.hero{padding:10px}.style{min-height:108px}.style .swatch{height:63px}.tab{font-size:12px}.btn{font-size:13px;padding:12px 10px}}
+@media(max-width:420px){.app{padding:15px 12px 24px}.mark{height:44px;width:44px;border-radius:15px;font-size:27px}h1{font-size:19px}.pill{font-size:10px;padding:7px}.stage{min-height:285px}.intro h2{font-size:26px}.sliders{grid-template-columns:1fr}.hero{padding:10px}.style{min-height:108px}.style .swatch{height:63px}.tab{font-size:11px}.btn{font-size:13px;padding:12px 10px}}
 @media(prefers-reduced-motion:reduce){.panel{animation:none}}
 </style>
 </head>
@@ -163,7 +170,8 @@ footer{color:#8d97ae;text-align:center;font-size:11px;line-height:1.65;margin-to
 <nav class="navtabs" role="tablist" aria-label="Разделы редактора">
   <button type="button" class="tab active" role="tab" aria-selected="true" data-tab="styles"><span class="tabicon">🎨</span> Стили</button>
   <button type="button" class="tab" role="tab" aria-selected="false" data-tab="adjust"><span class="tabicon">🎚️</span> Настройки</button>
-  <button type="button" class="tab" role="tab" aria-selected="false" data-tab="custom"><span class="tabicon">💜</span> Мои стили</button>
+  <button type="button" class="tab" role="tab" aria-selected="false" data-tab="custom"><span class="tabicon">💜</span> Мои</button>
+  <button type="button" class="tab" role="tab" aria-selected="false" data-tab="ai"><span class="tabicon">🤖</span> AI</button>
 </nav>
 <section class="group panel" id="stylesPanel" data-panel="styles" role="tabpanel">
   <div class="group-head"><h2>Выбери настроение</h2><span class="muted">16 эффектов</span></div>
@@ -182,8 +190,18 @@ footer{color:#8d97ae;text-align:center;font-size:11px;line-height:1.65;margin-to
   <div class="bottomrow"><button class="btn primary" id="newStyle">＋ Сохранить стиль</button><button class="btn ghost" id="exportStyles">⇧ Экспорт</button><button class="btn ghost" id="importStyles">⇩ Импорт</button></div>
   <input id="importFile" type="file" accept=".json,application/json" hidden>
 </section>
+<section class="group panel" id="aiPanel" data-panel="ai" role="tabpanel" hidden>
+  <div class="group-head"><h2>Настоящий AI-портрет</h2><span class="muted">Нейросеть · Бета</span></div>
+  <div class="ai-card">
+    <h3>📸 Размытие фона</h3>
+    <p class="helper">Нейросеть определяет человека на фотографии, а фон становится мягко размытым. Стили и сохранение 4K работают как обычно.</p>
+    <button type="button" class="btn primary" id="aiPortraitButton">✨ Включить AI-портрет</button>
+    <div class="ai-state" id="aiPortraitStatus" role="status" aria-live="polite">Загрузи фотографию человека, затем нажми кнопку.</div>
+    <p class="ai-footnote">При первом запуске понадобится интернет для загрузки модели MediaPipe. Фото обрабатывается на устройстве и не отправляется на сервер. MediaPipe может передавать Google диагностические метрики. Функция лучше работает с портретами людей, чем с пейзажами. <a href="https://www.npmjs.com/package/@mediapipe/tasks-vision" target="_blank" rel="noreferrer">О технологии</a>.</p>
+  </div>
+</section>
 </main>
-<footer>PhotoStyle AI · Версия 1.9 · Локальная обработка фото<br>Эффекты и Enhance Beta работают локально. Enhance Beta — не нейросеть.</footer>
+<footer>PhotoStyle AI · Версия 2.0 · Локальная обработка фото<br>AI-портрет использует модель MediaPipe; Enhance Beta — обычный алгоритм резкости.</footer>
 </div>
 <div class="dock"><div class="dock-inner"><button class="btn secondary" id="choose" type="button">＋ Загрузить фото</button><button class="btn primary" id="save" type="button" disabled>⬇ Сохранить</button></div></div>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -216,7 +234,7 @@ const fields=[
 ['tint','Розовый / зелёный',-100,100],['fade','Выцветание',0,100],
 ['grain','Зерно',0,100],['vignette','Виньетка',0,100],['posterize','Постеризация',0,18],['spooky','Мистика Хэллоуина',0,100]
 ];
-let custom=[],selected='Оригинал',photo=null,photoName='photo',params={},pending=0,toastTimer=0,export4k=false,enhanceBeta=false;
+let custom=[],selected='Оригинал',photo=null,photoName='photo',params={},pending=0,toastTimer=0,export4k=false,enhanceBeta=false,portraitMode=false;
 const blank=()=>Object.fromEntries(fields.map(x=>[x[0],0]));
 const normalize=p=>{const a=blank();for(const [k,,min,max] of fields){const v=Number(p&&p[k]);a[k]=Number.isFinite(v)?Math.max(min,Math.min(max,Math.round(v))):0;}return a;};
 const storage='photostyleai.custom.v1';
@@ -226,8 +244,8 @@ function persist(){try{localStorage.setItem(storage,JSON.stringify(custom));}cat
 
 const historyLimit=50;
 let historyStates=[],historyIndex=0;
-function snapshot(){return{name:selected,p:normalize(params),export4k,enhanceBeta};}
-function identical(a,b){return a&&b&&a.name===b.name&&a.export4k===b.export4k&&a.enhanceBeta===b.enhanceBeta&&JSON.stringify(a.p)===JSON.stringify(b.p);}
+function snapshot(){return{name:selected,p:normalize(params),export4k,enhanceBeta,portraitMode};}
+function identical(a,b){return a&&b&&a.name===b.name&&a.export4k===b.export4k&&a.enhanceBeta===b.enhanceBeta&&a.portraitMode===b.portraitMode&&JSON.stringify(a.p)===JSON.stringify(b.p);}
 function updateHistoryButtons(){
  const undo=$('undo'),redo=$('redo'),label=$('historyStatus');
  if(!undo||!redo)return;
@@ -256,6 +274,8 @@ function restoreHistory(){
  params=normalize(h.p);
  export4k=Boolean(h.export4k);
  enhanceBeta=Boolean(h.enhanceBeta);
+ portraitMode=Boolean(h.portraitMode)&&Boolean(portraitMaskCanvas);
+ updatePortraitUI();
  updateEnhanceToggle();
  updateExportQuality();
  syncSliders();
@@ -383,7 +403,7 @@ function initSliders(){for(const [k,label,min,max] of fields){const line=documen
 async function loadPhoto(file){
  if(!file||!(file.type.startsWith('image/')||/\.(jpe?g|png|webp|heic|heif)$/i.test(file.name)))return toast('Выбери фотографию из галереи',true);
  const url=URL.createObjectURL(file),im=new Image();
- im.onload=()=>{URL.revokeObjectURL(url);photo=im;photoName=(file.name||'photo').replace(/\.[^.]+$/,'').replace(/[^a-zA-Z0-9а-яА-Я_-]/g,'_').slice(0,50)||'photo';$('resolution').textContent=im.naturalWidth+' × '+im.naturalHeight;$('empty').style.display='none';$('preview').style.display='block';$('stage').classList.add('has-photo');$('save').disabled=false;draw();setComparison(50);updateExportQuality();resetHistory();resetThumbnails();toast('Фото загружено. Двигай линию для сравнения!');};
+ im.onload=()=>{URL.revokeObjectURL(url);photo=im;photoName=(file.name||'photo').replace(/\.[^.]+$/,'').replace(/[^a-zA-Z0-9а-яА-Я_-]/g,'_').slice(0,50)||'photo';$('resolution').textContent=im.naturalWidth+' × '+im.naturalHeight;$('empty').style.display='none';$('preview').style.display='block';$('stage').classList.add('has-photo');$('save').disabled=false;portraitMaskCanvas=null;portraitMode=false;portraitPhotoVersion++;updatePortraitUI();draw();setComparison(50);updateExportQuality();resetHistory();resetThumbnails();toast('Фото загружено. Двигай линию для сравнения!');};
  im.onerror=()=>{URL.revokeObjectURL(url);toast('Не удалось открыть фото. Попробуй JPG или PNG.',true);};
  im.src=url;
 }
@@ -432,6 +452,115 @@ function enhanceImage(data){
  return data;
 }
 
+
+// Local ML portrait segmentation via Google MediaPipe. Downloads model/runtime on demand,
+// never uploads image pixels to a remote inference service.
+const MEDIAPIPE_VERSION='1.2.2';
+const MEDIAPIPE_CDN='https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@'+MEDIAPIPE_VERSION;
+const MEDIAPIPE_MODEL='https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite';
+let portraitMaskCanvas=null,portraitPhotoVersion=0,portraitBusy=false,segmenterPromise=null;
+function updatePortraitUI(){
+ const btn=$('aiPortraitButton'),status=$('aiPortraitStatus');
+ btn.disabled=portraitBusy;
+ btn.textContent=portraitBusy?'⏳ Нейросеть обрабатывает…':portraitMode?'↺ Выключить AI-портрет':'✨ Включить AI-портрет';
+ if(portraitBusy)status.textContent='Первый запуск может занять некоторое время. Загружаем и запускаем нейросеть…';
+ else if(portraitMode)status.textContent='AI-портрет включён. Фон размыт.';
+ else if(portraitMaskCanvas)status.textContent='AI-портрет выключен. Можно включить снова без анализа.';
+ else status.textContent='Загрузи фото человека и нажми кнопку.';
+}
+async function loadImageSegmenter(){
+ if(!segmenterPromise){
+  segmenterPromise=(async()=>{
+   const {FilesetResolver,ImageSegmenter}=await import(MEDIAPIPE_CDN+'/vision_bundle.mjs');
+   const wasm=await FilesetResolver.forVisionTasks(MEDIAPIPE_CDN+'/wasm');
+   return ImageSegmenter.createFromOptions(wasm,{
+    baseOptions:{modelAssetPath:MEDIAPIPE_MODEL,delegate:'CPU'},
+    runningMode:'IMAGE',
+    outputCategoryMask:false,
+    outputConfidenceMasks:true
+   });
+  })().catch(error=>{segmenterPromise=null;throw error;});
+ }
+ return segmenterPromise;
+}
+function createPortraitMask(result){
+ const mask=result?.confidenceMasks?.[1];
+ if(!mask)throw new Error('Модель не вернула маску человека');
+ const raw=mask.getAsFloat32Array();
+ const width=mask.width,height=mask.height;
+ if(!width||!height||raw.length!==width*height)throw new Error('Недопустимая маска');
+ const pixels=new Uint8ClampedArray(width*height*4);
+ for(let i=0;i<raw.length;i++){
+  const opacity=Math.max(0,Math.min(1,(raw[i]-.13)/.74));
+  const j=i*4;
+  pixels[j]=255;pixels[j+1]=255;pixels[j+2]=255;
+  pixels[j+3]=Math.round(opacity*255);
+ }
+ const maskCanvas=document.createElement('canvas');
+ maskCanvas.width=width;maskCanvas.height=height;
+ maskCanvas.getContext('2d').putImageData(new ImageData(pixels,width,height),0,0);
+ return maskCanvas;
+}
+async function enablePortrait(){
+ if(!photo){toast('Сначала загрузи фотографию с человеком',true);return;}
+ if(portraitBusy)return;
+ if(portraitMode){
+  recordHistory();portraitMode=false;updatePortraitUI();schedule();recordHistory();return;
+ }
+ if(portraitMaskCanvas){
+  recordHistory();portraitMode=true;updatePortraitUI();schedule();recordHistory();return;
+ }
+ portraitBusy=true;updatePortraitUI();
+ const expectedPhoto=photo,expectedVersion=portraitPhotoVersion;
+ try{
+  const segmenter=await loadImageSegmenter();
+  if(expectedPhoto!==photo||expectedVersion!==portraitPhotoVersion)return;
+  // Scale down BEFORE inference to minimize iPhone RAM; output retains proportions.
+  const iw=photo.naturalWidth,ih=photo.naturalHeight,scale=Math.min(1,512/Math.max(iw,ih));
+  const input=document.createElement('canvas');
+  input.width=Math.max(1,Math.round(iw*scale));input.height=Math.max(1,Math.round(ih*scale));
+  const ictx=input.getContext('2d');ictx.imageSmoothingEnabled=true;ictx.imageSmoothingQuality='high';ictx.drawImage(photo,0,0,input.width,input.height);
+  await new Promise(resolve=>setTimeout(resolve,25));
+  const result=segmenter.segment(input);
+  let newMask;
+  try{newMask=createPortraitMask(result);}finally{result.close();}
+  if(expectedPhoto!==photo||expectedVersion!==portraitPhotoVersion)return;
+  portraitMaskCanvas=newMask;recordHistory();portraitMode=true;recordHistory();schedule();
+  toast('Нейросеть отделила человека от фона!');
+ }catch(error){
+  console.error('AI-портрет:',error);
+  $('aiPortraitStatus').textContent='Не удалось загрузить или запустить модель. Проверь интернет и попробуй снова.';
+  toast('AI-портрет не запустился. Остальные стили работают.',true);
+ }finally{
+  portraitBusy=false;updatePortraitUI();
+ }
+}
+$('aiPortraitButton').addEventListener('click',enablePortrait);
+function compositePortrait(target){
+ if(!portraitMode||!portraitMaskCanvas)return;
+ const width=target.width,height=target.height;
+ // Blur a smaller rendition of the already-styled result to reduce memory usage.
+ const scale=Math.min(1,1000/Math.max(width,height));
+ const blur=document.createElement('canvas');
+ blur.width=Math.max(1,Math.round(width*scale));blur.height=Math.max(1,Math.round(height*scale));
+ const bg=blur.getContext('2d');bg.imageSmoothingEnabled=true;bg.imageSmoothingQuality='high';
+ bg.filter='blur(9px)';bg.drawImage(target,0,0,blur.width,blur.height);bg.filter='none';
+ // Keep a full-resolution foreground with feathered person mask.
+ const foreground=document.createElement('canvas');
+ foreground.width=width;foreground.height=height;
+ const fg=foreground.getContext('2d');
+ fg.drawImage(target,0,0);
+ fg.globalCompositeOperation='destination-in';
+ fg.imageSmoothingEnabled=true;fg.imageSmoothingQuality='high';
+ fg.drawImage(portraitMaskCanvas,0,0,width,height);
+ fg.globalCompositeOperation='source-over';
+ const ctx=target.getContext('2d');
+ ctx.clearRect(0,0,width,height);
+ ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+ ctx.drawImage(blur,0,0,width,height);
+ ctx.drawImage(foreground,0,0);
+}
+
 function paint(canvas,maxSide,upscale=false){const im=photo,scale=upscale?maxSide/Math.max(im.naturalWidth,im.naturalHeight):Math.min(1,maxSide/Math.max(im.naturalWidth,im.naturalHeight));const w=Math.max(1,Math.round(im.naturalWidth*scale)),h=Math.max(1,Math.round(im.naturalHeight*scale));canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(im,0,0,w,h);return ctx;}
 function updateFrameSize(){
  if(!photo)return;
@@ -467,12 +596,13 @@ function draw(){
  pixelFilter(data,params);
  if(enhanceBeta)enhanceImage(data);
  ctx.putImageData(data,0,0);
+ compositePortrait(processed);
 }
 function schedule(){if(!photo)return;cancelAnimationFrame(pending);pending=requestAnimationFrame(draw);}
 function blobFrom(canvas,type){return new Promise(resolve=>canvas.toBlob(resolve,type,type==='image/jpeg'?.92:undefined));}
 async function savePhoto(){
  if(!photo)return;const button=$('save');button.disabled=true;button.textContent='Подготавливаю…';
- try{const is4k=export4k;await new Promise(resolve=>setTimeout(resolve,25));const c=document.createElement('canvas');paint(c,is4k?3840:2200,is4k);const ctx=c.getContext('2d',{willReadFrequently:true});const pixels=ctx.getImageData(0,0,c.width,c.height);pixelFilter(pixels,params);if(enhanceBeta)enhanceImage(pixels);ctx.putImageData(pixels,0,0);
+ try{const is4k=export4k;await new Promise(resolve=>setTimeout(resolve,25));const c=document.createElement('canvas');paint(c,is4k?3840:2200,is4k);const ctx=c.getContext('2d',{willReadFrequently:true});const pixels=ctx.getImageData(0,0,c.width,c.height);pixelFilter(pixels,params);if(enhanceBeta)enhanceImage(pixels);ctx.putImageData(pixels,0,0);compositePortrait(c);
  const blob=await blobFrom(c,'image/jpeg');if(!blob)throw Error('Проблема с изображением');
  const name=photoName+(is4k?'_PhotoStyle_4K':'_PhotoStyle')+'.jpg',file=new File([blob],name,{type:'image/jpeg'});
  if(navigator.canShare&&navigator.canShare({files:[file]})&&navigator.share){try{await navigator.share({files:[file],title:'PhotoStyle AI'});toast('Выбери «Сохранить изображение» или отправь фото.');return;}catch(e){if(e.name==='AbortError'){toast('Сохранение отменено');return;}}}
@@ -489,7 +619,7 @@ $('exportStyles').onclick=()=>{const blob=new Blob([JSON.stringify({app:'PhotoSt
 $('importStyles').onclick=()=>$('importFile').click();
 $('importFile').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{if(file.size>500000)throw Error('Большой файл');const obj=JSON.parse(await file.text());if(!obj||!Array.isArray(obj.styles))throw Error('Формат');for(const s of obj.styles.slice(0,100)){if(s&&typeof s.name==='string'&&s.name.trim()){const name=s.name.trim().slice(0,45);if(presetList.some(p=>p[0]===name))continue;const i=custom.findIndex(p=>p.name===name);const item={name,p:normalize(s.p)};if(i>=0)custom[i]=item;else if(custom.length<100)custom.push(item);}}persist();drawStyles();toast('Стили импортированы');}catch(err){toast('Не удалось импортировать JSON',true);}e.target.value='';};
 const stage=$('stage');
-params=blank();initSliders();syncSliders();drawStyles();updateEnhanceToggle();updateExportQuality();resetHistory();
+params=blank();initSliders();syncSliders();drawStyles();updateEnhanceToggle();updateExportQuality();updatePortraitUI();resetHistory();
 $('undo').onclick=undoHistory;
 $('redo').onclick=redoHistory;
 
