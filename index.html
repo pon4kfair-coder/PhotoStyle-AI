@@ -72,7 +72,7 @@ h2{font-size:16px;margin:0;letter-spacing:-.3px}
 .style{position:relative;min-height:117px;display:flex;flex-direction:column;align-items:stretch;justify-content:space-between;border-radius:18px;background:#1a2031;color:white;border:1px solid #3a425f;padding:9px;text-align:left;font-size:13px;font-weight:700;line-height:1.2;overflow:hidden}
 .style.selected{border-color:#a7f4e1;background:#24283d;box-shadow:0 0 0 1px #80e8d9}
 .style.selected:after{content:"✓";position:absolute;right:14px;top:13px;background:#e0fff7;color:#142b2a;width:25px;height:25px;border-radius:99px;display:grid;place-items:center;font-size:14px;box-shadow:0 1px 10px #0003}
-.style .swatch{height:72px;width:100%;border-radius:12px;display:grid;place-items:center;background:radial-gradient(ellipse at 30% 20%,#ffffff40,transparent 42%),linear-gradient(125deg,var(--a),var(--b));overflow:hidden}
+.style .swatch{position:relative;height:72px;width:100%;border-radius:12px;display:grid;place-items:center;background:radial-gradient(ellipse at 30% 20%,#ffffff40,transparent 42%),linear-gradient(125deg,var(--a),var(--b));overflow:hidden}.swatch .thumb-image{width:100%;height:100%;position:absolute;inset:0;display:block;object-fit:cover;pointer-events:none}.swatch:has(.thumb-image) .swatch-icon{opacity:0}
 .swatch-icon{font-size:28px;text-shadow:0 2px 10px #1117;filter:drop-shadow(0 2px 4px #0004)}
 .style-title{padding:7px 3px 1px;display:block}
 .style.selected .style-title{color:#e0fffa}
@@ -124,7 +124,7 @@ footer{color:#8d97ae;text-align:center;font-size:11px;line-height:1.65;margin-to
 <section class="group panel" id="stylesPanel" data-panel="styles" role="tabpanel">
   <div class="group-head"><h2>Выбери настроение</h2><span class="muted">14 эффектов</span></div>
   <div id="presets" class="styles" aria-label="Готовые стили"></div>
-  <p class="helper" style="margin-top:13px">Это цветовые стили: они меняют оттенки, свет и настроение кадра.</p>
+  <p class="helper" style="margin-top:13px">После загрузки фото здесь появятся миниатюры с твоим снимком в каждом стиле. Эффекты меняют цвет, свет и настроение кадра.</p>
 </section>
 <section class="group panel" id="adjustPanel" data-panel="adjust" role="tabpanel" hidden>
   <div class="group-head"><h2>Тонкая настройка</h2><button class="btn ghost" id="reset" style="min-height:37px;padding:8px 12px">↺ Сбросить</button></div>
@@ -139,7 +139,7 @@ footer{color:#8d97ae;text-align:center;font-size:11px;line-height:1.65;margin-to
   <input id="importFile" type="file" accept=".json,application/json" hidden>
 </section>
 </main>
-<footer>PhotoStyle AI · Версия 1.2 · Локальная обработка фото<br>Сейчас используются фотоэффекты, не генеративная нейросеть.</footer>
+<footer>PhotoStyle AI · Версия 1.3 · Локальная обработка фото<br>Сейчас используются фотоэффекты, не генеративная нейросеть.</footer>
 </div>
 <div class="dock"><div class="dock-inner"><button class="btn secondary" id="choose" type="button">＋ Загрузить фото</button><button class="btn primary" id="save" type="button" disabled>⬇ Сохранить</button></div></div>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -178,7 +178,69 @@ try{const read=JSON.parse(localStorage.getItem(storage)||'[]');if(Array.isArray(
 function toast(message,error){const el=$('toast');el.textContent=message;el.className=error?'error':'';el.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.style.display='none',3800);}
 function persist(){try{localStorage.setItem(storage,JSON.stringify(custom));}catch(e){toast('Не удалось сохранить стили. Используй экспорт JSON.',true);}}
 function switchStyle(name,p){selected=name;params=normalize(p);syncSliders();drawStyles();schedule();}
-function styleButton(name,a,b,p,isCustom,idx){const el=document.createElement('button');el.className='style'+(selected===name?' selected':'');el.type='button';const sw=document.createElement('span');sw.className='swatch';sw.style.setProperty('--a',a);sw.style.setProperty('--b',b);const ico=document.createElement('span');ico.className='swatch-icon';ico.textContent=styleIcons[name]||'✦';sw.appendChild(ico);el.appendChild(sw);const text=document.createElement('span');text.className='style-title';text.textContent=name;el.appendChild(text);el.setAttribute('aria-pressed',selected===name?'true':'false');el.onclick=()=>switchStyle(name,p);if(isCustom){el.title='Нажми, чтобы применить';el.oncontextmenu=e=>{e.preventDefault();removeCustom(idx);};}return el;}
+
+// Live previews: the source photo and all generated thumbnails stay on this device.
+let thumbnailBase=null,thumbnailVersion=0,thumbnailCache=new Map(),thumbnailQueued=new Set(),thumbnailJobs=[],thumbnailBusy=false;
+const thumbnailCanvas=document.createElement('canvas');
+thumbnailCanvas.width=224;
+thumbnailCanvas.height=128;
+const thumbnailContext=thumbnailCanvas.getContext('2d',{willReadFrequently:true});
+function thumbnailKey(name,p){return name+'|'+JSON.stringify(normalize(p));}
+function resetThumbnails(){
+ thumbnailVersion++;
+ thumbnailCache.clear();thumbnailQueued.clear();thumbnailJobs=[];
+ if(!photo){thumbnailBase=null;drawStyles();return;}
+ const w=thumbnailCanvas.width,h=thumbnailCanvas.height,iw=photo.naturalWidth,ih=photo.naturalHeight;
+ const cover=Math.max(w/iw,h/ih),width=iw*cover,height=ih*cover;
+ thumbnailContext.clearRect(0,0,w,h);
+ thumbnailContext.drawImage(photo,(w-width)/2,(h-height)/2,width,height);
+ thumbnailBase=thumbnailContext.getImageData(0,0,w,h);
+ drawStyles();
+}
+function attachThumbnail(swatch,url){
+ if(swatch.querySelector('.thumb-image'))return;
+ const image=document.createElement('img');
+ image.className='thumb-image';image.alt='';image.decoding='async';image.src=url;
+ swatch.appendChild(image);
+}
+function applyThumbnail(key,url){
+ for(const button of document.querySelectorAll('button.style')){
+  if(button.dataset.thumbnailKey===key){const swatch=button.querySelector('.swatch');if(swatch)attachThumbnail(swatch,url);}
+ }
+}
+function queueThumbnail(name,p,swatch){
+ if(!thumbnailBase)return;
+ const key=thumbnailKey(name,p);
+ const cached=thumbnailCache.get(key);
+ if(cached){attachThumbnail(swatch,cached);return;}
+ if(!thumbnailQueued.has(key)){
+  thumbnailQueued.add(key);
+  thumbnailJobs.push({key,params:normalize(p),version:thumbnailVersion});
+ }
+ if(!thumbnailBusy){thumbnailBusy=true;setTimeout(processThumbnails,12);}
+}
+function processThumbnails(){
+ // Render two small thumbnails per task so the editor stays responsive on iPhone.
+ for(let count=0;count<2&&thumbnailJobs.length;count++){
+  const job=thumbnailJobs.shift();
+  if(job.version!==thumbnailVersion)continue;
+  thumbnailQueued.delete(job.key);
+  if(thumbnailCache.has(job.key))continue;
+  try{
+   const pixels=thumbnailContext.createImageData(thumbnailBase.width,thumbnailBase.height);
+   pixels.data.set(thumbnailBase.data);
+   pixelFilter(pixels,job.params);
+   thumbnailContext.putImageData(pixels,0,0);
+   const url=thumbnailCanvas.toDataURL('image/jpeg',.76);
+   thumbnailCache.set(job.key,url);
+   applyThumbnail(job.key,url);
+  }catch(err){console.warn('Не удалось создать миниатюру',err);}
+ }
+ if(thumbnailJobs.length)setTimeout(processThumbnails,22);
+ else thumbnailBusy=false;
+}
+
+function styleButton(name,a,b,p,isCustom,idx){const el=document.createElement('button');el.className='style'+(selected===name?' selected':'');el.type='button';const sw=document.createElement('span');sw.className='swatch';sw.style.setProperty('--a',a);sw.style.setProperty('--b',b);const ico=document.createElement('span');ico.className='swatch-icon';ico.textContent=styleIcons[name]||'✦';sw.appendChild(ico);el.appendChild(sw);el.dataset.thumbnailKey=thumbnailKey(name,p);queueThumbnail(name,p,sw);const text=document.createElement('span');text.className='style-title';text.textContent=name;el.appendChild(text);el.setAttribute('aria-pressed',selected===name?'true':'false');el.onclick=()=>switchStyle(name,p);if(isCustom){el.title='Нажми, чтобы применить';el.oncontextmenu=e=>{e.preventDefault();removeCustom(idx);};}return el;}
 function removeCustom(idx){if(confirm('Удалить стиль «'+custom[idx].name+'»?')){custom.splice(idx,1);persist();drawStyles();}}
 function drawStyles(){
  const list=$('presets');list.replaceChildren();for(const s of presetList)list.appendChild(styleButton(s[0],s[1],s[2],s[3],false));
@@ -192,7 +254,7 @@ function initSliders(){for(const [k,label,min,max] of fields){const line=documen
 async function loadPhoto(file){
  if(!file||!(file.type.startsWith('image/')||/\.(jpe?g|png|webp|heic|heif)$/i.test(file.name)))return toast('Выбери фотографию из галереи',true);
  const url=URL.createObjectURL(file),im=new Image();
- im.onload=()=>{URL.revokeObjectURL(url);photo=im;photoName=(file.name||'photo').replace(/\.[^.]+$/,'').replace(/[^a-zA-Z0-9а-яА-Я_-]/g,'_').slice(0,50)||'photo';$('resolution').textContent=im.naturalWidth+' × '+im.naturalHeight;$('empty').style.display='none';$('preview').style.display='block';$('stage').classList.add('has-photo');$('save').disabled=false;draw();toast('Фото загружено. Выбирай стиль!');};
+ im.onload=()=>{URL.revokeObjectURL(url);photo=im;photoName=(file.name||'photo').replace(/\.[^.]+$/,'').replace(/[^a-zA-Z0-9а-яА-Я_-]/g,'_').slice(0,50)||'photo';$('resolution').textContent=im.naturalWidth+' × '+im.naturalHeight;$('empty').style.display='none';$('preview').style.display='block';$('stage').classList.add('has-photo');$('save').disabled=false;draw();resetThumbnails();toast('Фото загружено. Миниатюры стилей появятся через пару секунд!');};
  im.onerror=()=>{URL.revokeObjectURL(url);toast('Не удалось открыть фото. Попробуй JPG или PNG.',true);};
  im.src=url;
 }
