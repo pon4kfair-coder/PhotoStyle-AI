@@ -168,7 +168,7 @@ footer{color:#8d97ae;text-align:center;font-size:11px;line-height:1.65;margin-to
 <section class="group panel" id="stylesPanel" data-panel="styles" role="tabpanel">
   <div class="group-head"><h2>Выбери настроение</h2><span class="muted">16 эффектов</span></div>
   <div id="presets" class="styles" aria-label="Готовые стили"></div>
-  <p class="helper" style="margin-top:13px">После загрузки фото здесь появятся миниатюры с твоим снимком в каждом стиле. Эффекты меняют цвет, свет и настроение кадра.</p>
+  <p class="helper" style="margin-top:13px">Миниатюры показывают эффекты на твоём фото. Теперь предпросмотр работает в повышенном разрешении, а стили с плавными оттенками не разбивают цвета на квадратики.</p>
 </section>
 <section class="group panel" id="adjustPanel" data-panel="adjust" role="tabpanel" hidden>
   <div class="group-head"><h2>Тонкая настройка</h2><button class="btn ghost" id="reset" style="min-height:37px;padding:8px 12px">↺ Сбросить</button></div>
@@ -183,7 +183,7 @@ footer{color:#8d97ae;text-align:center;font-size:11px;line-height:1.65;margin-to
   <input id="importFile" type="file" accept=".json,application/json" hidden>
 </section>
 </main>
-<footer>PhotoStyle AI · Версия 1.7 · Локальная обработка фото<br>Эффекты и Enhance Beta работают локально. Enhance Beta — не нейросеть.</footer>
+<footer>PhotoStyle AI · Версия 1.8 · Локальная обработка фото<br>Эффекты и Enhance Beta работают локально. Enhance Beta — не нейросеть.</footer>
 </div>
 <div class="dock"><div class="dock-inner"><button class="btn secondary" id="choose" type="button">＋ Загрузить фото</button><button class="btn primary" id="save" type="button" disabled>⬇ Сохранить</button></div></div>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -196,8 +196,8 @@ const presetList=[
 ['Киберпанк','#ed48ad','#42d8ed',{contrast:23,saturation:42,warmth:-23,tint:23,vignette:38,grain:4}],
 ['Хэллоуин','#281642','#f89b37',{brightness:-11,contrast:25,saturation:17,spooky:83,vignette:48,grain:13}],
 ['4K · Чёткость','#729acc','#e8f7ff',{brightness:3,contrast:12,saturation:6}],
-['Аниме-палитра','#fcbc67','#f26fb5',{brightness:9,contrast:19,saturation:45,posterize:9}],
-['GTA-палитра','#f8ab38','#db437b',{contrast:30,saturation:41,warmth:10,posterize:12,vignette:12}],
+['Аниме-палитра','#fcbc67','#f26fb5',{brightness:9,contrast:19,saturation:45}],
+['GTA-палитра','#f8ab38','#db437b',{contrast:30,saturation:41,warmth:10,vignette:12}],
 ['Плёнка 70-х','#b96f4d','#d4c28d',{contrast:-14,saturation:-21,warmth:27,fade:24,grain:26,vignette:36}],
 ['Цифровые 2000-е','#7aa4ed','#ebc8a5',{contrast:22,saturation:8,warmth:-9,grain:10}],
 ['Ч/Б нуар','#171c28','#afb5c0',{contrast:34,saturation:-100,vignette:43,grain:11}],
@@ -277,8 +277,8 @@ function switchStyle(name,p){recordHistory();selected=name;params=normalize(p);i
 // Live previews: the source photo and all generated thumbnails stay on this device.
 let thumbnailBase=null,thumbnailVersion=0,thumbnailCache=new Map(),thumbnailQueued=new Set(),thumbnailJobs=[],thumbnailBusy=false;
 const thumbnailCanvas=document.createElement('canvas');
-thumbnailCanvas.width=224;
-thumbnailCanvas.height=128;
+thumbnailCanvas.width=384;
+thumbnailCanvas.height=216;
 const thumbnailContext=thumbnailCanvas.getContext('2d',{willReadFrequently:true});
 function thumbnailKey(name,p){return name+'|'+JSON.stringify(normalize(p));}
 function resetThumbnails(){
@@ -326,7 +326,7 @@ function processThumbnails(){
    pixels.data.set(thumbnailBase.data);
    pixelFilter(pixels,job.params);
    thumbnailContext.putImageData(pixels,0,0);
-   const url=thumbnailCanvas.toDataURL('image/jpeg',.76);
+   const url=thumbnailCanvas.toDataURL('image/jpeg',.9);
    thumbnailCache.set(job.key,url);
    applyThumbnail(job.key,url);
   }catch(err){console.warn('Не удалось создать миниатюру',err);}
@@ -439,8 +439,32 @@ function updateFrameSize(){
  $('photoFrame').style.width=width+'px';
  $('photoFrame').style.height=(width/ratio)+'px';
 }
-window.addEventListener('resize',updateFrameSize);
-function draw(){if(!photo)return;updateFrameSize();const original=$('original'),processed=$('preview');paint(original,1100);processed.width=original.width;processed.height=original.height;const ctx=processed.getContext('2d');const data=original.getContext('2d',{willReadFrequently:true}).getImageData(0,0,original.width,original.height);pixelFilter(data,params);if(enhanceBeta)enhanceImage(data);ctx.putImageData(data,0,0);}
+window.addEventListener('resize',()=>{if(photo)schedule();});
+// Match the preview canvas to the iPhone's high-density screen while keeping
+// pixel memory bounded (2.2 million pixels) and never enlarging the original.
+function previewMaxSide(){
+ const frame=$('photoFrame');
+ const width=Math.max(1,frame.clientWidth);
+ const height=Math.max(1,frame.clientHeight);
+ const density=Math.min(3,Math.max(1,window.devicePixelRatio||1));
+ const desired=Math.max(width,height)*density;
+ const long=Math.max(photo.naturalWidth,photo.naturalHeight);
+ const short=Math.max(1,Math.min(photo.naturalWidth,photo.naturalHeight));
+ const memoryLimit=Math.sqrt(2200000*long/short);
+ return Math.max(1,Math.round(Math.min(2400,long,desired,memoryLimit)));
+}
+function draw(){
+ if(!photo)return;
+ updateFrameSize();
+ const original=$('original'),processed=$('preview');
+ paint(original,previewMaxSide());
+ processed.width=original.width;processed.height=original.height;
+ const ctx=processed.getContext('2d');
+ const data=original.getContext('2d',{willReadFrequently:true}).getImageData(0,0,original.width,original.height);
+ pixelFilter(data,params);
+ if(enhanceBeta)enhanceImage(data);
+ ctx.putImageData(data,0,0);
+}
 function schedule(){if(!photo)return;cancelAnimationFrame(pending);pending=requestAnimationFrame(draw);}
 function blobFrom(canvas,type){return new Promise(resolve=>canvas.toBlob(resolve,type,type==='image/jpeg'?.92:undefined));}
 async function savePhoto(){
