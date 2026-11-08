@@ -403,7 +403,7 @@ function initSliders(){for(const [k,label,min,max] of fields){const line=documen
 async function loadPhoto(file){
  if(!file||!(file.type.startsWith('image/')||/\.(jpe?g|png|webp|heic|heif)$/i.test(file.name)))return toast('Выбери фотографию из галереи',true);
  const url=URL.createObjectURL(file),im=new Image();
- im.onload=()=>{URL.revokeObjectURL(url);photo=im;photoName=(file.name||'photo').replace(/\.[^.]+$/,'').replace(/[^a-zA-Z0-9а-яА-Я_-]/g,'_').slice(0,50)||'photo';$('resolution').textContent=im.naturalWidth+' × '+im.naturalHeight;$('empty').style.display='none';$('preview').style.display='block';$('stage').classList.add('has-photo');$('save').disabled=false;portraitMaskCanvas=null;portraitMode=false;portraitPhotoVersion++;updatePortraitUI();draw();setComparison(50);updateExportQuality();resetHistory();resetThumbnails();toast('Фото загружено. Двигай линию для сравнения!');};
+ im.onload=()=>{URL.revokeObjectURL(url);photo=im;photoName=(file.name||'photo').replace(/\.[^.]+$/,'').replace(/[^a-zA-Z0-9а-яА-Я_-]/g,'_').slice(0,50)||'photo';$('resolution').textContent=im.naturalWidth+' × '+im.naturalHeight;$('empty').style.display='none';$('preview').style.display='block';$('stage').classList.add('has-photo');$('save').disabled=false;portraitMaskCanvas=null;portraitMode=false;portraitError='';portraitPhotoVersion++;updatePortraitUI();draw();setComparison(50);updateExportQuality();resetHistory();resetThumbnails();toast('Фото загружено. Двигай линию для сравнения!');};
  im.onerror=()=>{URL.revokeObjectURL(url);toast('Не удалось открыть фото. Попробуй JPG или PNG.',true);};
  im.src=url;
 }
@@ -458,7 +458,7 @@ function enhanceImage(data){
 const MEDIAPIPE_VERSION='1.2.2';
 const MEDIAPIPE_CDN='https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@'+MEDIAPIPE_VERSION;
 const MEDIAPIPE_MODEL='https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite';
-let portraitMaskCanvas=null,portraitPhotoVersion=0,portraitBusy=false,segmenterPromise=null;
+let portraitMaskCanvas=null,portraitPhotoVersion=0,portraitBusy=false,segmenterPromise=null,portraitError='';
 function updatePortraitUI(){
  const btn=$('aiPortraitButton'),status=$('aiPortraitStatus');
  btn.disabled=portraitBusy;
@@ -466,6 +466,7 @@ function updatePortraitUI(){
  if(portraitBusy)status.textContent='Первый запуск может занять некоторое время. Загружаем и запускаем нейросеть…';
  else if(portraitMode)status.textContent='AI-портрет включён. Фон размыт.';
  else if(portraitMaskCanvas)status.textContent='AI-портрет выключен. Можно включить снова без анализа.';
+ else if(portraitError)status.textContent=portraitError;
  else status.textContent='Загрузи фото человека и нажми кнопку.';
 }
 async function loadImageSegmenter(){
@@ -510,7 +511,7 @@ async function enablePortrait(){
  if(portraitMaskCanvas){
   recordHistory();portraitMode=true;updatePortraitUI();schedule();recordHistory();return;
  }
- portraitBusy=true;updatePortraitUI();
+ portraitError='';portraitBusy=true;updatePortraitUI();
  const expectedPhoto=photo,expectedVersion=portraitPhotoVersion;
  try{
   const segmenter=await loadImageSegmenter();
@@ -529,7 +530,7 @@ async function enablePortrait(){
   toast('Нейросеть отделила человека от фона!');
  }catch(error){
   console.error('AI-портрет:',error);
-  $('aiPortraitStatus').textContent='Не удалось загрузить или запустить модель. Проверь интернет и попробуй снова.';
+  portraitError='Не удалось запустить модель. Проверь интернет и попробуй ещё раз.';
   toast('AI-портрет не запустился. Остальные стили работают.',true);
  }finally{
   portraitBusy=false;updatePortraitUI();
