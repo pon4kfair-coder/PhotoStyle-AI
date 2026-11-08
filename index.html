@@ -321,6 +321,9 @@ function restoreHistory(){
  backgroundScene=h.backgroundScene||'neon';
  edgeSoftness=Number.isFinite(h.edgeSoftness)?h.edgeSoftness:4;
  updateSceneUI();
+ if(photoScenes[backgroundScene]&&!scenePhotoCache.has(backgroundScene)){
+  loadRealBackground(backgroundScene).then(()=>{if(photo&&portraitMode)schedule();}).catch(()=>{});
+ }
  updatePortraitUI();
  updateEnhanceToggle();
  updateExportQuality();
@@ -508,6 +511,7 @@ let portraitMaskCanvas=null,portraitPhotoVersion=0,portraitBusy=false,segmenterP
 
 const sceneLabels={neon:'Неоновый город',forest:'Волшебный лес',halloween:'Ночь Хэллоуина',sunset:'Закат у моря',studio:'Фотостудия',blur:'Размытие оригинала',custom:'Мой фон'};
 function updateSceneUI(){
+ refreshSceneCredits();
  for(const button of document.querySelectorAll('[data-scene]')){
   const active=button.dataset.scene===backgroundScene;
   button.classList.toggle('selected',active);
@@ -517,15 +521,28 @@ function updateSceneUI(){
  $('edgeSoftnessValue').textContent=String(edgeSoftness);
  $('customBackgroundButton').textContent=customBackgroundImage?'✓ Мой фон загружен · Изменить':'＋ Загрузить свой фон';
 }
-function chooseBackgroundScene(scene){
+async function chooseBackgroundScene(scene){
  if(!sceneLabels[scene])return;
  if(scene==='custom'&&!customBackgroundImage){$('backgroundFile').click();return;}
- recordHistory();
- backgroundScene=scene;
+ recordHistory();backgroundScene=scene;
+ updateSceneUI();
+ if(photo&&photoScenes[scene]&&!scenePhotoCache.has(scene)){
+  $('aiPortraitStatus').textContent='Загружаю фотографию окружения…';
+  try{await ensureBackgroundReady(scene);}
+  catch(err){
+   if(backgroundScene===scene){
+    portraitMode=false;updatePortraitUI();
+    $('aiPortraitStatus').textContent=errText(err);
+    toast('Фон не загрузился. Попробуй Safari или свой фон.',true);
+   }
+   return;
+  }
+  if(backgroundScene!==scene)return;
+ }
  if(portraitMaskCanvas)portraitMode=true;
  updateSceneUI();updatePortraitUI();schedule();recordHistory();
  if(photo&&!portraitMaskCanvas&&!portraitBusy)enablePortrait();
- else if(!photo)toast('Загрузи фото человека, чтобы увидеть новый фон');
+ else if(!photo)toast('Сначала загрузи фото человека');
 }
 for(const button of document.querySelectorAll('[data-scene]')){
  button.addEventListener('click',()=>chooseBackgroundScene(button.dataset.scene));
@@ -701,6 +718,10 @@ async function enablePortrait(){
  portraitError='';portraitBusy=true;portraitStatus('Подготавливаю нейросеть…');
  const expectedPhoto=photo,expectedVersion=portraitPhotoVersion;
  try{
+  if(photoScenes[backgroundScene]){
+   portraitStatus('Загружаю фотореалистичный фон…');
+   await ensureBackgroundReady(backgroundScene);
+  }
   // Resize once for both engines; avoids unnecessary iPhone memory usage.
   const iw=photo.naturalWidth,ih=photo.naturalHeight,scale=Math.min(1,704/Math.max(iw,ih));
   const input=document.createElement('canvas');
@@ -841,38 +862,59 @@ function backgroundCover(c,img,w,h){
 
 function compositePortrait(target){
  if(!portraitMode||!portraitMaskCanvas)return;
+ if(photoScenes[backgroundScene]&&!scenePhotoCache.has(backgroundScene))return;
  const width=target.width,height=target.height;
- // Preserve the edited person, then replace every background pixel.
  const foreground=document.createElement('canvas');
  foreground.width=width;foreground.height=height;
  const fg=foreground.getContext('2d');
+ // Retain the source photograph ONLY where the person mask is strong.
  fg.drawImage(target,0,0);
  fg.globalCompositeOperation='destination-in';
  fg.imageSmoothingEnabled=true;fg.imageSmoothingQuality='high';
- if(edgeSoftness)fg.filter='blur('+Math.min(18,edgeSoftness*width/1000)+'px)';
+ // Soft but not smeared edges: scale feather gently at high export sizes.
+ if(edgeSoftness){
+  fg.filter='blur('+Math.min(7,edgeSoftness*.38*Math.min(2,width/1000))+'px)';
+ }
  fg.drawImage(portraitMaskCanvas,0,0,width,height);
- fg.filter='none';fg.globalCompositeOperation='source-over';
+ fg.filter='none';
+ fg.globalCompositeOperation='source-atop';
+ // Harmonize ambient light subtly, preserving facial detail and identity.
+ const light=sceneLightPalette(),rgb=light.rgb;
+ const strength=backgroundScene==='blur'?.015:light.strength;
+ fg.fillStyle='rgba('+rgb[0]+','+rgb[1]+','+rgb[2]+','+strength+')';
+ fg.fillRect(0,0,width,height);
+ fg.globalCompositeOperation='source-over';
  const ctx=target.getContext('2d');
- if(backgroundScene==='blur'||(backgroundScene==='custom'&&!customBackgroundImage)){
-  // Original photographic bokeh with clear defocus. Slight crop avoids blur edges.
+ if(backgroundScene==='blur'){
   const reduced=document.createElement('canvas');
-  const factor=Math.min(1,1050/Math.max(width,height));
-  reduced.width=Math.max(1,Math.round(width*factor));reduced.height=Math.max(1,Math.round(height*factor));
+  const scale=Math.min(1,1050/Math.max(width,height));
+  reduced.width=Math.max(1,Math.round(width*scale));
+  reduced.height=Math.max(1,Math.round(height*scale));
   const bg=reduced.getContext('2d');
-  bg.filter='blur(24px)';bg.drawImage(target,-12,-12,reduced.width+24,reduced.height+24);bg.filter='none';
+  bg.filter='blur(24px)';
+  bg.drawImage(target,-12,-12,reduced.width+24,reduced.height+24);
+  bg.filter='none';
   ctx.clearRect(0,0,width,height);
   ctx.drawImage(reduced,0,0,width,height);
  }else{
+  const image=backgroundScene==='custom'?customBackgroundImage:scenePhotoCache.get(backgroundScene);
+  if(!image)return;
   ctx.clearRect(0,0,width,height);
-  if(backgroundScene==='custom'){
-   backgroundCover(ctx,customBackgroundImage,width,height);
-  }else{
-   drawBackgroundArt(target,backgroundScene);
-  }
+  ctx.save();
+  ctx.translate(width/2,height/2);
+  ctx.scale(1.025,1.025);ctx.translate(-width/2,-height/2);
+  ctx.filter='blur('+Math.min(4,Math.max(1,width*.0025))+'px)';
+  backgroundCover(ctx,image,width,height);
+  ctx.restore();
  }
+ // Delicate cast shadow behind subject adds separation without fake outlines.
+ ctx.save();
+ ctx.shadowColor='rgba(8,12,26,.44)';
+ ctx.shadowBlur=Math.min(28,Math.max(6,width*.018));
+ ctx.shadowOffsetY=Math.min(9,Math.max(2,width*.003));
  ctx.drawImage(foreground,0,0);
+ ctx.restore();
 }
-
 
 // Real 2× neural upscaling with ESRGAN-slim from UpscalerJS.
 // The user photo is kept in a local canvas; JS and model weights load on demand.
@@ -942,6 +984,7 @@ async function runUpscale(){
  runButton.textContent='⏳ AI Upscale выполняется…';
  $('upscaleResultBox').hidden=true;upscaleResultUrl='';
  try{
+  if(portraitMode&&photoScenes[backgroundScene])await ensureBackgroundReady(backgroundScene);
   const input=prepareUpscaleInput();
   upscaleStatus('Подготавливаю '+input.width+' × '+input.height+' → '+input.width*2+' × '+input.height*2+' пикселей…');
   // Let the iPhone repaint controls before expensive neural inference.
@@ -1028,7 +1071,8 @@ function schedule(){if(!photo)return;cancelAnimationFrame(pending);pending=reque
 function blobFrom(canvas,type){return new Promise(resolve=>canvas.toBlob(resolve,type,type==='image/jpeg'?.92:undefined));}
 async function savePhoto(){
  if(!photo)return;const button=$('save');button.disabled=true;button.textContent='Подготавливаю…';
- try{const is4k=export4k;await new Promise(resolve=>setTimeout(resolve,25));const c=document.createElement('canvas');paint(c,is4k?3840:2200,is4k);const ctx=c.getContext('2d',{willReadFrequently:true});const pixels=ctx.getImageData(0,0,c.width,c.height);pixelFilter(pixels,params);if(enhanceBeta)enhanceImage(pixels);ctx.putImageData(pixels,0,0);compositePortrait(c);
+ try{if(portraitMode&&photoScenes[backgroundScene])await ensureBackgroundReady(backgroundScene);
+ const is4k=export4k;await new Promise(resolve=>setTimeout(resolve,25));const c=document.createElement('canvas');paint(c,is4k?3840:2200,is4k);const ctx=c.getContext('2d',{willReadFrequently:true});const pixels=ctx.getImageData(0,0,c.width,c.height);pixelFilter(pixels,params);if(enhanceBeta)enhanceImage(pixels);ctx.putImageData(pixels,0,0);compositePortrait(c);
  const blob=await blobFrom(c,'image/jpeg');if(!blob)throw Error('Проблема с изображением');
  const name=photoName+(is4k?'_PhotoStyle_4K':'_PhotoStyle')+'.jpg',file=new File([blob],name,{type:'image/jpeg'});
  if(navigator.canShare&&navigator.canShare({files:[file]})&&navigator.share){try{await navigator.share({files:[file],title:'PhotoStyle AI'});toast('Выбери «Сохранить изображение» или отправь фото.');return;}catch(e){if(e.name==='AbortError'){toast('Сохранение отменено');return;}}}
@@ -1045,7 +1089,7 @@ $('exportStyles').onclick=()=>{const blob=new Blob([JSON.stringify({app:'PhotoSt
 $('importStyles').onclick=()=>$('importFile').click();
 $('importFile').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{if(file.size>500000)throw Error('Большой файл');const obj=JSON.parse(await file.text());if(!obj||!Array.isArray(obj.styles))throw Error('Формат');for(const s of obj.styles.slice(0,100)){if(s&&typeof s.name==='string'&&s.name.trim()){const name=s.name.trim().slice(0,45);if(presetList.some(p=>p[0]===name))continue;const i=custom.findIndex(p=>p.name===name);const item={name,p:normalize(s.p)};if(i>=0)custom[i]=item;else if(custom.length<100)custom.push(item);}}persist();drawStyles();toast('Стили импортированы');}catch(err){toast('Не удалось импортировать JSON',true);}e.target.value='';};
 const stage=$('stage');
-params=blank();initSliders();syncSliders();drawStyles();updateEnhanceToggle();updateExportQuality();updateSceneUI();updatePortraitUI();resetHistory();
+params=blank();initSliders();syncSliders();drawStyles();updateEnhanceToggle();updateExportQuality();refreshSceneThumbnails();updateSceneUI();updatePortraitUI();resetHistory();
 $('undo').onclick=undoHistory;
 $('redo').onclick=redoHistory;
 
