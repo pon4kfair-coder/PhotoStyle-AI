@@ -41,6 +41,7 @@ h2{font-size:16px;margin:0;letter-spacing:-.3px}
 .stage{background:radial-gradient(ellipse at 50% 35%,#30344c,#111726 72%);border:1px dashed #4d546a;min-height:310px;display:flex;align-items:center;justify-content:center;border-radius:21px;overflow:hidden;position:relative;isolation:isolate;touch-action:pan-y}
 .stage:before{content:"";position:absolute;inset:0;background-image:linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px);background-size:24px 24px;opacity:.025;pointer-events:none}
 .stage.has-photo{border-style:solid;border-color:#313a57;background:#101521}
+.stage.has-photo:before{display:none}
 .empty{text-align:center;padding:29px 19px;max-width:300px;position:relative;z-index:1}
 .empty .emoji{display:grid;place-items:center;width:72px;height:72px;margin:0 auto 14px;border-radius:22px;font-size:35px;background:linear-gradient(135deg,#443d67,#283d53);box-shadow:0 12px 25px #0002}
 .empty h3{font-size:21px;margin:8px 0 8px;letter-spacing:-.5px}
@@ -108,7 +109,11 @@ h2{font-size:16px;margin:0;letter-spacing:-.3px}
 .scene-choice{min-width:0;display:flex;flex-direction:column;gap:0;text-align:left;background:#171c2e;color:#f5f5ff;border:1px solid #4a4e6d;border-radius:16px;padding:7px 7px 10px;font-weight:750;font-size:12px;position:relative}
 .scene-choice.selected{border-color:#9ef0db;box-shadow:0 0 0 1px #91ead4;background:#27314a}
 .scene-choice.selected:after{content:"✓";position:absolute;top:13px;right:14px;display:grid;place-items:center;background:#c9fff0;color:#19342d;border-radius:50%;width:23px;height:23px;font-size:13px}
-.scene-thumb{display:flex;align-items:center;justify-content:center;font-size:30px;height:85px;width:100%;border-radius:11px;margin-bottom:9px;box-shadow:inset 0 -18px 34px #0005}
+.scene-thumb{display:flex;align-items:center;justify-content:center;font-size:30px;height:85px;width:100%;border-radius:11px;margin-bottom:9px;box-shadow:inset 0 -18px 34px #0005;background-size:cover;background-position:center}
+.scene-license{margin:9px 0 0;font-size:10px;line-height:1.4;color:#8796ab}
+.scene-license a{color:#b8d4ff}
+.scene-choice.loading{border-color:#bca8fc}
+
 .scene-choice .scene-name{padding:0 5px;line-height:1.2}
 .scene-neon{background:linear-gradient(170deg,#201549,#77318a 57%,#1e395a 60%,#0e122a)}
 .scene-forest{background:linear-gradient(160deg,#1b3855,#35795e 52%,#162d37)}
@@ -203,8 +208,8 @@ footer{color:#8d97ae;text-align:center;font-size:11px;line-height:1.65;margin-to
 <section class="group panel" id="aiPanel" data-panel="ai" role="tabpanel" hidden>
   <div class="group-head"><h2>AI Studio ✨</h2><span class="muted">Нейросеть и новые миры</span></div>
   <div class="ai-card">
-    <div class="ai-action-top"><h3>🌌 Замена фона</h3><span class="pill">NEW · AI</span></div>
-    <p class="helper">Не просто цветной фильтр: нейросеть отделяет человека, а приложение создаёт новую сцену с предметами, светом и деталями. Можешь также загрузить свою фотографию фона.</p>
+    <div class="ai-action-top"><h3>🌌 Замена фона</h3><span class="pill">REAL PHOTO</span></div>
+    <p class="helper">Фотореалистичные окружения: настоящие фотографии вместо мультяшных декораций. Нейросеть сохраняет человека, а приложение подбирает свет и мягко соединяет края.</p>
     <div class="scene-picker" id="scenePicker">
       <button class="scene-choice selected" data-scene="neon" type="button"><span class="scene-thumb scene-neon">🌃</span><span class="scene-name">Неоновый город</span></button>
       <button class="scene-choice" data-scene="forest" type="button"><span class="scene-thumb scene-forest">🌲</span><span class="scene-name">Волшебный лес</span></button>
@@ -215,10 +220,11 @@ footer{color:#8d97ae;text-align:center;font-size:11px;line-height:1.65;margin-to
     </div>
     <button class="btn ghost" id="customBackgroundButton" type="button">＋ Загрузить свой фон</button>
     <input type="file" accept="image/*" id="backgroundFile" hidden>
-    <label class="scene-controls" for="edgeSoftness">Мягкие края <input type="range" id="edgeSoftness" min="0" max="12" value="4"><output id="edgeSoftnessValue">4</output></label>
+    <label class="scene-controls" for="edgeSoftness">Мягкие края <input type="range" id="edgeSoftness" min="0" max="12" value="3"><output id="edgeSoftnessValue">3</output></label>
     <button type="button" class="btn primary" id="aiPortraitButton">✨ Применить AI-фон</button>
     <div class="ai-state" id="aiPortraitStatus" role="status" aria-live="polite">Загрузи фотографию человека и выбери фон.</div>
-    <p class="ai-footnote">Нейросеть MediaPipe выделяет человека локально, а сцены — детализированные цифровые рисунки, не нейросетевая генерация. Для первого запуска нужен интернет. Качество обработки волос и краёв зависит от исходного фото. <a href="https://www.npmjs.com/package/@mediapipe/tasks-vision" target="_blank" rel="noreferrer">О MediaPipe</a>.</p>
+    <div class="scene-license"><a id="sceneCredit" href="https://unsplash.com/license" target="_blank" rel="noopener noreferrer">Фотографии: Unsplash</a> · <span>реальные снимки</span></div>
+    <p class="ai-footnote">Для встроенных фонов загружаются реальные фотографии с Unsplash; твоя фотография не отправляется на сервер. Нейросеть MediaPipe выделяет человека на устройстве. Для первого запуска нужен интернет. Результат зависит от качества маски волос и краёв. <a href="https://www.npmjs.com/package/@mediapipe/tasks-vision" target="_blank" rel="noreferrer">О MediaPipe</a>.</p>
   </div>
   <div class="ai-card" style="margin-top:15px">
     <h3>💎 Нейросетевой AI Upscale ×2</h3>
@@ -238,7 +244,7 @@ footer{color:#8d97ae;text-align:center;font-size:11px;line-height:1.65;margin-to
   </div>
 </section>
 </main>
-<footer>PhotoStyle AI · Версия 2.3 · Локальная обработка фото<br>AI-фоны используют нейросеть MediaPipe для выделения человека. AI Upscale — ESRGAN. Enhance Beta — обычный алгоритм резкости.</footer>
+<footer>PhotoStyle AI · Версия 2.4 · Локальная обработка фото<br>AI-фоны используют нейросеть MediaPipe для выделения человека. AI Upscale — ESRGAN. Enhance Beta — обычный алгоритм резкости.</footer>
 </div>
 <div class="dock"><div class="dock-inner"><button class="btn secondary" id="choose" type="button">＋ Загрузить фото</button><button class="btn primary" id="save" type="button" disabled>⬇ Сохранить</button></div></div>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -498,7 +504,7 @@ function enhanceImage(data){
 const MEDIAPIPE_VERSION='1.2.2';
 const MEDIAPIPE_CDN='https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@'+MEDIAPIPE_VERSION;
 const MEDIAPIPE_MODEL='https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite';
-let portraitMaskCanvas=null,portraitPhotoVersion=0,portraitBusy=false,segmenterPromise=null,portraitError='',portraitStep='',backgroundScene='neon',customBackgroundImage=null,edgeSoftness=4;
+let portraitMaskCanvas=null,portraitPhotoVersion=0,portraitBusy=false,segmenterPromise=null,portraitError='',portraitStep='',backgroundScene='neon',customBackgroundImage=null,edgeSoftness=3;
 
 const sceneLabels={neon:'Неоновый город',forest:'Волшебный лес',halloween:'Ночь Хэллоуина',sunset:'Закат у моря',studio:'Фотостудия',blur:'Размытие оригинала',custom:'Мой фон'};
 function updateSceneUI(){
@@ -636,7 +642,7 @@ function makeLegacyMask(segmentationMask,width,height){
  for(let i=0;i<d.length;i+=4){
   const coverage=varyingAlpha?d[i+3]/255:(d[i]+d[i+1]+d[i+2])/(3*255);
   d[i]=d[i+1]=d[i+2]=255;
-  d[i+3]=Math.max(0,Math.min(255,Math.round((coverage-.1)/.78*255)));
+  d[i+3]=Math.max(0,Math.min(255,Math.round((coverage-.08)/.84*255)));
  }
  ctx.putImageData(pixels,0,0);
  return output;
@@ -673,7 +679,7 @@ function createPortraitMask(result){
  if(!width||!height||raw.length!==width*height)throw new Error('Недопустимая маска');
  const pixels=new Uint8ClampedArray(width*height*4);
  for(let i=0;i<raw.length;i++){
-  const opacity=Math.max(0,Math.min(1,(raw[i]-.13)/.74));
+  const opacity=Math.max(0,Math.min(1,(raw[i]-.10)/.82));
   const j=i*4;
   pixels[j]=255;pixels[j+1]=255;pixels[j+2]=255;
   pixels[j+3]=Math.round(opacity*255);
@@ -696,7 +702,7 @@ async function enablePortrait(){
  const expectedPhoto=photo,expectedVersion=portraitPhotoVersion;
  try{
   // Resize once for both engines; avoids unnecessary iPhone memory usage.
-  const iw=photo.naturalWidth,ih=photo.naturalHeight,scale=Math.min(1,512/Math.max(iw,ih));
+  const iw=photo.naturalWidth,ih=photo.naturalHeight,scale=Math.min(1,704/Math.max(iw,ih));
   const input=document.createElement('canvas');
   input.width=Math.max(1,Math.round(iw*scale));input.height=Math.max(1,Math.round(ih*scale));
   const ictx=input.getContext('2d');ictx.imageSmoothingEnabled=true;ictx.imageSmoothingQuality='high';ictx.drawImage(photo,0,0,input.width,input.height);
@@ -734,171 +740,96 @@ async function enablePortrait(){
 }
 $('aiPortraitButton').addEventListener('click',enablePortrait);
 
-/* Original scene illustrations. The model segments the foreground person;
-   the scenes are locally drawn Canvas artwork, NOT generative AI imagery. */
-function sceneSky(c,top,bottom){
- const g=c.createLinearGradient(0,0,0,1000);
- g.addColorStop(0,top);g.addColorStop(1,bottom);
- c.fillStyle=g;c.fillRect(0,0,1000,1000);
+/* Real photo backdrops under the Unsplash License. The user's image never leaves
+   this device: only these licensed empty scenes download from images.unsplash.com.
+   Full-res scene loads on demand; low-res cards are separate URLs. */
+const photoScenes={
+ neon:{
+  id:'photo-1732704895089-ec0e78d7ce91',
+  credit:'Фото: Valentin BEAUVAIS · Unsplash',
+  link:'https://unsplash.com/photos/a-city-street-at-night-with-neon-lights-vKCQQNX8qs0',
+  rgb:[123,80,180],strength:.11
+ },
+ forest:{
+  id:'photo-1769006352025-1a429e69398f',
+  credit:'Фото: Pascal Debrunner · Unsplash',
+  link:'https://unsplash.com/photos/misty-forest-with-sunbeams-filtering-through-trees-8xkImX3so8U',
+  rgb:[119,143,136],strength:.08
+ },
+ halloween:{
+  id:'photo-1750307092531-e628316f99c3',
+  credit:'Фото: Maryam Tello · Unsplash',
+  link:'https://unsplash.com/photos/house-in-the-fog-surrounded-by-overhanging-trees-UzDnG7us94k',
+  rgb:[104,119,114],strength:.13
+ },
+ sunset:{
+  id:'photo-1736829391323-a302d2737210',
+  credit:'Фото: David Dür · Unsplash',
+  link:'https://unsplash.com/photos/a-sunset-with-palm-trees-and-the-ocean-in-the-background-M5JJ5n78PqA',
+  rgb:[237,151,86],strength:.12
+ },
+ studio:{
+  id:'photo-1736580602204-b940bb0423ec',
+  credit:'Фото: Neon Wang · Unsplash',
+  link:'https://unsplash.com/photos/a-photo-studio-with-a-white-backdrop-and-light-Zre04MQTBjA',
+  rgb:[220,217,209],strength:.065
+ }
+};
+const scenePhotoCache=new Map();
+const scenePhotoPromises=new Map();
+function scenePhotoUrl(scene,quality){
+ const item=photoScenes[scene];
+ if(!item)return null;
+ // Use JPEG rather than AVIF for broad Safari compatibility and canvas export.
+ return 'https://images.unsplash.com/'+item.id+'?fm=jpg&fit=crop&auto=compress&w='+(quality==='thumb'?420:2400)+'&q='+(quality==='thumb'?68:85);
 }
-function sceneCircle(c,x,y,r,color){
- c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.fillStyle=color;c.fill();
+function refreshSceneCredits(){
+ const item=photoScenes[backgroundScene],anchor=$('sceneCredit');
+ anchor.textContent=item?item.credit:'Фон загружен с устройства';
+ anchor.href=item?item.link:'https://unsplash.com/license';
 }
-function scenePolygon(c,coords,color){
- c.beginPath();c.moveTo(coords[0],coords[1]);
- for(let i=2;i<coords.length;i+=2)c.lineTo(coords[i],coords[i+1]);
- c.closePath();c.fillStyle=color;c.fill();
-}
-function sceneStar(c,x,y,r,color){
- c.strokeStyle=color;c.lineWidth=Math.max(1,r*.19);
- c.beginPath();c.moveTo(x-r,y);c.lineTo(x+r,y);c.moveTo(x,y-r);c.lineTo(x,y+r);c.stroke();
-}
-function drawBackgroundArt(target,scene){
- const c=target.getContext('2d');
- const w=target.width,h=target.height;
- c.save();c.scale(w/1000,h/1000);
- if(scene==='neon'){
-  sceneSky(c,'#12143d','#843c91');
-  sceneCircle(c,735,175,87,'#eacaf6');
-  for(let i=0;i<52;i++)sceneStar(c,(i*173+59)%1000,(i*97+31)%465,(i%3)+2,'#e6c9ff');
-  // Layered high-rise skyline with lit windows, awnings and neon signs.
-  for(let layer=0;layer<2;layer++){
-   for(let i=0;i<15;i++){
-    const x=i*79-50+layer*23,top=320+(i*113+layer*77)%235;
-    const bw=72,fill=layer===0?'#262344':'#161c3e';
-    c.fillStyle=fill;c.fillRect(x,top,bw,690-top);
-    c.fillStyle=layer===0?'#a05ad8':'#45d5e8';
-    c.fillRect(x+5,top+6,bw-10,3);
-    for(let yy=top+24;yy<675;yy+=33){
-     for(let xx=x+12;xx<x+bw-10;xx+=20){
-      c.fillStyle=((i+yy+xx)%4===0)?'#f3a7e9':'#68c9ff';
-      c.globalAlpha=.35+((i+yy)%4)*.12;c.fillRect(xx,yy,9,16);
-     }
-    }
-    c.globalAlpha=1;
-   }
-  }
-  c.fillStyle='#15102e';c.fillRect(0,670,1000,330);
-  scenePolygon(c,[0,1000,350,680,650,680,1000,1000],'#30284d');
-  for(let i=0;i<15;i++){
-   const y=700+i*22;
-   c.strokeStyle=i%2?'#ec57bd':'#54dfe8';c.globalAlpha=.4;
-   c.lineWidth=2+i/7;c.beginPath();c.moveTo((i*31)%350,y);c.lineTo(500+(i*51)%360,y+7);c.stroke();
-  }c.globalAlpha=1;
-  // Large detailed roadside holograms.
-  c.save();c.translate(40,435);
-  c.shadowColor='#ff4cbe';c.shadowBlur=22;c.strokeStyle='#f55fcd';c.lineWidth=8;
-  c.strokeRect(0,0,172,125);c.fillStyle='#ffd0f3';c.font='bold 34px sans-serif';c.fillText('N E O N',10,60);
-  c.restore();
-  c.save();c.translate(770,455);c.shadowColor='#57deff';c.shadowBlur=19;
-  c.strokeStyle='#55deff';c.lineWidth=7;c.strokeRect(0,0,190,140);
-  c.fillStyle='#8ef9ff';c.font='bold 37px sans-serif';c.fillText('CITY',27,75);c.restore();
- }else if(scene==='forest'){
-  sceneSky(c,'#17385a','#367a65');
-  const glow=c.createRadialGradient(520,260,30,520,260,530);
-  glow.addColorStop(0,'#d2fad7b0');glow.addColorStop(1,'#2a6a3600');
-  c.fillStyle=glow;c.fillRect(0,0,1000,850);
-  for(let i=0;i<6;i++){
-   scenePolygon(c,[530,200,50+i*200,950,180+i*150,950],'#b8fadd0b');
-  }
-  scenePolygon(c,[0,760,210,570,375,685,550,555,775,680,1000,515,1000,1000,0,1000],'#194c46');
-  for(let layer=0;layer<3;layer++){
-   for(let i=0;i<14;i++){
-    const x=(i*101+layer*39)%1120-80,y=350+(i*43)%210+layer*76;
-    const height=270+((i*29)%210);
-    c.fillStyle=layer===2?'#102c34':'#22564a';c.fillRect(x-9,y,18,height);
-    for(let k=0;k<4;k++)scenePolygon(c,[x,y-135+k*55,x-93+layer*13,y+85+k*48,x+93-layer*13,y+85+k*48],layer===2?'#123d3c':'#28745b');
-   }
-  }
-  c.fillStyle='#143d37';c.fillRect(0,890,1000,110);
-  // Forest-floor details: mushrooms and tiny glowing fireflies.
-  for(let i=0;i<24;i++){
-   const x=(i*137+31)%1000,y=790+(i*61)%188;
-   c.fillStyle='#ded6b5';c.fillRect(x,y,6,25);
-   sceneCircle(c,x+3,y,13,i%3?'#d68056':'#e9af67');
-   c.fillStyle='#ffe5b1';sceneCircle(c,x-1,y-3,2,'#ffe5b1');
-  }
-  for(let i=0;i<80;i++){
-   const x=(i*251+79)%1000,y=(i*127+61)%930;
-   c.globalAlpha=.45+(i%5)*.1;
-   sceneCircle(c,x,y,2+(i%3),'#d7ffb3');
-  }c.globalAlpha=1;
- }else if(scene==='halloween'){
-  sceneSky(c,'#140f35','#6c2f56');
-  sceneCircle(c,740,220,111,'#f7ae75');
-  sceneCircle(c,759,208,99,'#ffdb9a');
-  for(let i=0;i<55;i++)sceneStar(c,(i*237+71)%1000,(i*113+23)%570,2+(i%3),'#c4b7f5');
-  scenePolygon(c,[0,800,200,650,440,800,680,640,1000,720,1000,1000,0,1000],'#22152d');
-  // Turrets and windows on a haunted castle.
-  for(const [x,y,wid,hei] of [[220,485,130,370],[375,405,140,475],[560,500,110,335]]){
-   c.fillStyle='#15152c';c.fillRect(x,y,wid,hei);
-   scenePolygon(c,[x-15,y,x+wid/2,y-110,x+wid+15,y],'#211332');
-   for(let yy=y+43;yy<y+hei-30;yy+=72){
-    sceneCircle(c,x+wid/2,yy,13,'#ffb464');
-    c.fillStyle='#ffb464';c.fillRect(x+wid/2-13,yy,26,31);
-   }
-  }
-  // Bats.
-  for(let i=0;i<12;i++){
-   const x=(i*151+70)%980,y=(i*79+53)%410;
-   c.strokeStyle='#18172d';c.lineWidth=5;c.beginPath();
-   c.moveTo(x-16,y);c.quadraticCurveTo(x-8,y-15,x,y);c.quadraticCurveTo(x+8,y-15,x+16,y);c.stroke();
-  }
-  c.fillStyle='#1c1727';c.fillRect(0,900,1000,100);
-  // Pumpkins with distinct glowing jack-o'-lantern faces.
-  for(let i=0;i<9;i++){
-   const x=60+i*116,y=885+(i%2)*50,r=35+(i%3)*7;
-   sceneCircle(c,x,y,r,'#cf632e');
-   sceneCircle(c,x-8,y,r*.69,'#ed8843');
-   sceneCircle(c,x+9,y,r*.63,'#e77932');
-   c.fillStyle='#315339';c.fillRect(x-4,y-r-10,8,15);
-   scenePolygon(c,[x-22,y-8,x-8,y-13,x-13,y+5],'#2b2031');
-   scenePolygon(c,[x+7,y-13,x+23,y-7,x+11,y+5],'#2b2031');
-   scenePolygon(c,[x-18,y+17,x+18,y+17,x,y+28],'#2b2031');
-  }
- }else if(scene==='sunset'){
-  sceneSky(c,'#604d97','#fda36e');
-  sceneCircle(c,605,470,124,'#ffdc95');
-  c.fillStyle='#eca174';c.fillRect(0,580,1000,60);
-  const ocean=c.createLinearGradient(0,620,0,1000);
-  ocean.addColorStop(0,'#5c9b9f');ocean.addColorStop(1,'#103957');
-  c.fillStyle=ocean;c.fillRect(0,620,1000,380);
-  for(let i=0;i<34;i++){
-   const x=(i*127+5)%930,y=645+(i*67)%310;
-   c.strokeStyle=i%2?'#b9e1d6':'#ffbb8f';c.globalAlpha=.2+(i%5)*.1;
-   c.lineWidth=3;c.beginPath();c.moveTo(x,y);c.lineTo(x+60+(i%5)*30,y);c.stroke();
-  }c.globalAlpha=1;
-  scenePolygon(c,[0,1000,0,830,240,860,390,1000],'#1c433e');
-  // Silhouetted palm tree with fronds.
-  c.strokeStyle='#1c393c';c.lineWidth=27;c.beginPath();c.moveTo(80,990);c.quadraticCurveTo(150,670,260,430);c.stroke();
-  for(let i=0;i<11;i++){
-   const angle=i*Math.PI*2/11;
-   c.strokeStyle='#214a40';c.lineWidth=15;c.beginPath();c.moveTo(260,430);
-   const ex=260+Math.cos(angle)*210,ey=430+Math.sin(angle)*100;
-   c.quadraticCurveTo((260+ex)/2,ey-100,ex,ey+45);c.stroke();
-  }
-  // Birds.
-  for(let i=0;i<10;i++){
-   const x=550+(i*77)%410,y=100+(i*43)%230;
-   c.strokeStyle='#402e55';c.lineWidth=4;c.beginPath();
-   c.moveTo(x-17,y);c.quadraticCurveTo(x-8,y-10,x,y);c.quadraticCurveTo(x+8,y-10,x+17,y);c.stroke();
-  }
- }else{
-  sceneSky(c,'#26365e','#17223b');
-  const spot=c.createRadialGradient(500,310,70,500,460,550);
-  spot.addColorStop(0,'#c8dcf8');spot.addColorStop(.55,'#7189b0');spot.addColorStop(1,'#273757');
-  c.fillStyle=spot;c.fillRect(0,0,1000,920);
-  c.fillStyle='#28354d';c.fillRect(0,850,1000,150);
-  for(let i=0;i<9;i++){
-   c.strokeStyle=i%2?'#c3dcfb30':'#8390c225';c.lineWidth=4;
-   c.beginPath();c.ellipse(500,380,120+i*60,180+i*55,0,0,Math.PI*2);c.stroke();
-  }
-  for(let i=0;i<12;i++){
-   const x=(i*171+41)%1000,y=(i*89+37)%800;
-   sceneCircle(c,x,y,7+i%6,'#c8e0ef42');
+function refreshSceneThumbnails(){
+ for(const button of document.querySelectorAll('[data-scene]')){
+  const name=button.dataset.scene;
+  const img=button.querySelector('.scene-thumb');
+  const url=scenePhotoUrl(name,'thumb');
+  if(img&&url){
+   img.style.backgroundImage='linear-gradient(0deg,#0007,#0000 60%),url("'+url+'")';
   }
  }
- c.restore();
+}
+function loadRealBackground(scene){
+ const cached=scenePhotoCache.get(scene);
+ if(cached)return Promise.resolve(cached);
+ if(scenePhotoPromises.has(scene))return scenePhotoPromises.get(scene);
+ const url=scenePhotoUrl(scene,'full');
+ if(!url)return Promise.reject(new Error('Неизвестный фон'));
+ const promise=new Promise((resolve,reject)=>{
+  const image=new Image();
+  // Prevent tainting canvas: Safari must receive CORS permission.
+  image.crossOrigin='anonymous';
+  const timer=setTimeout(()=>reject(new Error('Фон загружается слишком долго')),25000);
+  image.onload=()=>{
+   clearTimeout(timer);
+   if(!image.naturalWidth||!image.naturalHeight){reject(new Error('Фон пустой'));return;}
+   scenePhotoCache.set(scene,image);resolve(image);
+  };
+  image.onerror=()=>{clearTimeout(timer);reject(new Error('Не удалось загрузить фотореалистичный фон. Проверь интернет и открой Safari.'));};
+  image.src=url;
+ }).finally(()=>scenePhotoPromises.delete(scene));
+ scenePhotoPromises.set(scene,promise);
+ return promise;
+}
+function sceneIsReady(scene){
+ return scene==='blur'||scene==='custom'&&!!customBackgroundImage||scenePhotoCache.has(scene);
+}
+async function ensureBackgroundReady(scene){
+ if(scene==='blur'||scene==='custom'&&customBackgroundImage)return;
+ if(!photoScenes[scene])throw new Error('Неизвестная сцена');
+ await loadRealBackground(scene);
+}
+function sceneLightPalette(){
+ return photoScenes[backgroundScene]||{rgb:[170,180,205],strength:.035};
 }
 function backgroundCover(c,img,w,h){
  const iw=img.naturalWidth,ih=img.naturalHeight;
