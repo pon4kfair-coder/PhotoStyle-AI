@@ -632,7 +632,7 @@ async function enablePortrait(){
   toast('Нейросеть отделила человека от фона!');
  }catch(error){
   console.error('AI-портрет:',error);
-  portraitError='Ошибка AI: '+errText(error)+'. Попробуй открыть приложение в Safari.';
+  portraitError='Ошибка AI: '+String(error&&error.message||error).slice(0,360)+'. Попробуй открыть приложение в Safari.';
   toast('AI-портрет не запустился. Подробности на вкладке AI.',true);
  }finally{
   portraitBusy=false;updatePortraitUI();
